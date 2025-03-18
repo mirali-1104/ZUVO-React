@@ -1,0 +1,126 @@
+/* Center everything */
+.Vehicle-model-section {
+  font-family: Arial, sans-serif;
+  background-color: #d6cfb4;
+  color: #41372d;
+  display: flex;
+  justify-content: center;
+  padding-bottom: 50px;
+}
+
+/* Swiper container */
+.swiper {
+  width: 100%;
+  max-width: 1100px;
+  padding: 20px 0;
+}
+
+/* Swiper slides */
+.swiper-slide {
+  display: flex;
+  justify-content: center;
+}
+
+/* Card styling */
+.card {
+  background-color: #3a2e2e;
+  color: white;
+  border-radius: 10px;
+  width: 270px;
+  height: 239px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease-in-out;
+  position: relative;
+}
+
+.card img {
+  width: 200px;
+  height: 120px;
+  border-radius: 10px;
+  margin: 15px auto 0 auto; /* Center the image */
+  display: block; /* Ensure the image respects the margin auto */
+}
+
+/* Input and button styling */
+input[type="text"] {
+  border: 1px solid #ccc;
+  border-right: none;
+  border-radius: 4px;
+  padding: 10px;
+  width: 200px;
+  background-color: #41372d;
+  color: white;
+  margin-right: 10px;
+}
+
+button {
+  border: 1px solid #ccc;
+  border-left: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: #41372d;
+  color: white;
+  padding: 8.7px;
+}
+
+button:hover {
+  background-color: #5d544c;
+}
+
+/* Card body styling */
+.card-body {
+  margin-top: 20px;
+  background-color: white;
+  color: black;
+  border-radius: 5px;
+  padding: 8px;
+  text-align: left;
+}
+
+.card-body h3 {
+  margin: 0;
+  font-weight: bold;
+}
+
+.card-body h2 {
+  margin: 0;
+}
+
+.card-body p {
+  margin: 0;
+}
+
+.card-body span {
+  margin: 0;
+}
+
+/* Like button */
+.like-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  /* background: white; */
+  border-radius: 50%;
+  padding: 5px;
+  cursor: pointer;
+}
+.like-button :hover {
+  color: red;
+}
+
+/* Card info styling */
+.card-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+.card-info span {
+  display: flex;
+  align-items: center;
+}
+
+.card-info span svg {
+  margin-right: 4px;
+}

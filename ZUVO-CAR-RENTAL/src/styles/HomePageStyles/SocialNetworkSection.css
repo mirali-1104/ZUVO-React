@@ -1,0 +1,31 @@
+.social-network-section {
+  background-color: #41372D;
+  padding: 20px;
+  border-radius: 5px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: 20px auto;
+  width: 80%;
+  max-width: 600px;
+}
+
+.social-network-section p {
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+.social-icons {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin: 15px 0;
+}
+
+.social-icons a {
+  text-decoration: none;
+}
+
+.social-network-section a {
+  color: #007BFF;
+  text-decoration: underline;
+}

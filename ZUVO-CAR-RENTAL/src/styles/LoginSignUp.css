@@ -1,0 +1,180 @@
+.container {
+  display: flex;
+  height: 100%;
+  color: black;
+  width: 100%;
+}
+
+hr{
+  width: 600px;
+  padding: 0;
+  margin: 0;
+  background-color: #41372d;
+  height: 2px;
+}
+.left-section {
+  flex: 1;
+  background-color: #41372d;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding-top: 20px;
+}
+
+.car-image {
+  max-width: 80%;
+  height: auto;
+}
+
+.right-section .logo {
+  padding-top: 0;
+  margin:0;
+  width: 70px;
+  height: auto;
+  padding-left: 500px;
+  align-items: right;
+  justify-content: right;
+
+}
+
+.right-section {
+  flex: 1;
+  background-color: #d6cfb4;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.welcome-text {
+  font-size: 28px;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 350px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  margin-bottom: 5px;
+  font-weight: bold;
+  text-align: left;
+  width: 100%;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: white;
+  box-sizing: border-box;
+}
+
+.auth-button {
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  background-color: #41372d;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.auth-button:hover {
+  background-color: #342e28;
+}
+
+.divider {
+  margin: 20px 0;
+  position: relative;
+  text-align: center;
+}
+
+.divider span {
+  background-color: #d6cfb4;
+  padding: 0 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.divider::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 1px;
+  background-color: #ccc;
+  z-index: 0;
+}
+
+.google-button,
+.facebook-button {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  margin: 5px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #41372d;
+  color: white;
+}
+
+.google-button {
+  background-color: #41372d;
+}
+
+.facebook-button {
+  background-color: #41372d;
+}
+
+.google-button svg,
+.facebook-button svg {
+  margin-right: 10px;
+}
+
+.toggle-text {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.toggle-link {
+  color: #007bff;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.toggle-link:hover {
+  text-decoration: none;
+}
+
+.forgot-password {
+  margin-top: -10px;
+  margin-bottom: 20px;
+  text-align: right;
+}
+
+.forgot-password a {
+  color: #007bff;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.forgot-password a:hover {
+  text-decoration: underline;
+}
