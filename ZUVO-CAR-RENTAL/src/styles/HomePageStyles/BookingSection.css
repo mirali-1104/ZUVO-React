@@ -43,10 +43,11 @@
   background-color: #41372d;
   color: #fff;
   border: none;
-  border-radius: 4px;
+  border-radius: 10px;
   cursor: pointer;
 }
 
 .search-button:hover {
   background-color: #484038;
 }
+

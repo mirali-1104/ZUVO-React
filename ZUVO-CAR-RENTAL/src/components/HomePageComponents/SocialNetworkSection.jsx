@@ -1,6 +1,6 @@
 import React from "react";
 import { FaYoutube, FaTwitter, FaFacebook, FaInstagram } from "react-icons/fa";
-import "F:/RP - ZUVO/ZUVO-CAR-RENTAL/src/styles/HomePageStyles/SocialNetworkSection.css";
+import "F:/RP - ZUVO/ZUVO-React/ZUVO-CAR-RENTAL/src/styles/HomePageStyles/SocialNetworkSection.css";
 
 const SocialNetworkSection = () => {
   return (

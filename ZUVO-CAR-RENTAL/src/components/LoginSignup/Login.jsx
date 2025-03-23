@@ -1,10 +1,17 @@
 import React from "react";
 import { FaGoogle, FaFacebook } from "react-icons/fa";
-import "F:/RP - ZUVO/ZUVO-CAR-RENTAL/src/styles/LoginSignUp.css";
+import { useNavigate } from "react-router-dom";
+import "F:/RP - ZUVO/ZUVO-React/ZUVO-CAR-RENTAL/src/styles/LoginSignUp.css";
 
 const Login = ({ toggleForm }) => {
+  const navigate = useNavigate();
+
   const handleForgotPassword = () => {
     console.log("Forgot Password clicked");
+  };
+
+  const handleSignUpClick = () => {
+    navigate("/home-after-login");
   };
 
   return (
@@ -36,7 +43,11 @@ const Login = ({ toggleForm }) => {
             Forgot Password?
           </a>
         </div>
-        <button type="submit" className="auth-button">
+        <button
+          type="submit"
+          className="auth-button"
+          onClick={handleSignUpClick}
+        >
           Sign In
         </button>
       </form>

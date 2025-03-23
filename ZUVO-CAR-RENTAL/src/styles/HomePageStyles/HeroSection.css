@@ -36,6 +36,7 @@
 }
 
 .hero-buttons button {
+  display: flex;
   padding: 10px 20px;
   margin: 0 10px;
   border: none;
@@ -44,12 +45,12 @@
 }
 
 .book-ride {
-  background-color: #41372D;
+  background-color: #41372d;
   color: #fff;
 }
 
 .learn-more {
-  background-color: #41372D;
+  background-color: #41372d;
   color: white;
 }
 

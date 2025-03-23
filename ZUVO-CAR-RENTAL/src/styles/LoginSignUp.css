@@ -5,7 +5,7 @@
   width: 100%;
 }
 
-hr{
+hr {
   width: 600px;
   padding: 0;
   margin: 0;
@@ -29,13 +29,12 @@ hr{
 
 .right-section .logo {
   padding-top: 0;
-  margin:0;
+  margin: 0;
   width: 70px;
   height: auto;
   padding-left: 500px;
   align-items: right;
   justify-content: right;
-
 }
 
 .right-section {
@@ -79,6 +78,7 @@ hr{
   border-radius: 5px;
   background-color: white;
   box-sizing: border-box;
+  color: black;
 }
 
 .auth-button {
@@ -177,4 +177,16 @@ hr{
 
 .forgot-password a:hover {
   text-decoration: underline;
+}
+.back-icon {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 24px;
+  color: white;
+  cursor: pointer;
+}
+
+.back-icon:hover {
+  color: #d6cfb4;
 }

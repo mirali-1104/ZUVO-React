@@ -1,5 +1,5 @@
 import React from "react";
-import "F:/RP - ZUVO/ZUVO-CAR-RENTAL/src/styles/HomePageStyles/BookingSection.css";
+import "F:/RP - ZUVO/ZUVO-React/ZUVO-CAR-RENTAL/src/styles/HomePageStyles/BookingSection.css";
 
 const BookingSection = () => {
   return (
@@ -13,7 +13,7 @@ const BookingSection = () => {
             <option value="state1">Gujarat</option>
             <option value="state2">Maharashtra</option>
           </select>
-          <input type="text" placeholder="Location" className="input-field" />
+          <input type="text" placeholder="Location" className="input-field location" />
           <input
             type="date"
             placeholder="Rent Up"

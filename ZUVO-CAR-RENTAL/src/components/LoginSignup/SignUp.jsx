@@ -1,6 +1,6 @@
 import React from "react";
 import { FaGoogle, FaFacebook } from "react-icons/fa";
-import "F:/RP - ZUVO/ZUVO-CAR-RENTAL/src/styles/LoginSignUp.css";
+import "F:/RP - ZUVO/ZUVO-React/ZUVO-CAR-RENTAL/src/styles/LoginSignUp.css";
 
 const SignUp = ({ toggleForm }) => {
   return (

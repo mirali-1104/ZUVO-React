@@ -1,5 +1,5 @@
 import React from "react";
-import "F:/RP - ZUVO/ZUVO-CAR-RENTAL/src/styles/HomePageStyles/AboutSection.css";
+import "F:/RP - ZUVO/ZUVO-React/ZUVO-CAR-RENTAL/src/styles/HomePageStyles/AboutSection.css";
 
 const AboutSection = () => {
   return (

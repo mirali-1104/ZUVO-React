@@ -74,3 +74,15 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+/* Ensure sidebar text is black */
+.pro-sidebar {
+  color: black !important;
+}
+
+.pro-sidebar .pro-menu-item {
+  color: black !important;
+}
+
+.pro-sidebar .pro-menu-item:hover {
+  color: black !important;
+}

@@ -1,6 +1,6 @@
 // src/HeroSection.jsx
 import React from "react";
-import "F:/RP - ZUVO/ZUVO-CAR-RENTAL/src/styles/HomePageStyles/HeroSection.css";
+import "F:/RP - ZUVO/ZUVO-React/ZUVO-CAR-RENTAL/src/styles/HomePageStyles/HeroSection.css";
 
 const HeroSection = () => {
   return (

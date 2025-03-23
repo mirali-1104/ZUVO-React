@@ -6,6 +6,9 @@ import BookingSection from "./components/HomePageComponents/BookingSection.jsx";
 import AboutSection from "./components/HomePageComponents/AboutSection";
 import VehicleModelsSection from "./components/HomePageComponents/VehicleModels";
 import LoginSignup from "./pages/LoginSignUp.jsx";
+import HomeAfterLogin from "./pages/HomeAfterLogin";
+import ProfilePage from "./pages/ProfilePage";
+import CarBuy from "./pages/CarBuy";
 // import ContactSection from "./ContactSection";
 
 function App() {
@@ -18,6 +21,9 @@ function App() {
         <Route path="/vehicle-models" element={<VehicleModelsSection />} />
         {/* <Route path="/contact" element={<ContactSection />} /> */}
         <Route path="/login" element={<LoginSignup />} />{" "}
+        <Route path="/home-after-login" element={<HomeAfterLogin />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/car-buy" element={<CarBuy/>} />
         {/* Route for login/signup */}
       </Routes>
     </Router>
