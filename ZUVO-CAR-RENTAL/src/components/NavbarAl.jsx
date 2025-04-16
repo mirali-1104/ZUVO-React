@@ -1,7 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { FaUserCircle } from "react-icons/fa"; // Import the profile icon from react-icons
-import "../styles/Navbar.css";
+import { FaUserCircle } from "react-icons/fa";
 
 const NavbarAl = () => {
   const scrollToSection = (sectionId) => {
@@ -12,23 +11,53 @@ const NavbarAl = () => {
   };
 
   return (
-    <nav className="navbar">
-      <div className="logo">
-        <img src="logo.png" alt="logo" height="60px" />
+    <nav
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: "#d8cfb3",
+        padding: "10px 30px",
+        fontFamily: "Arial, sans-serif",
+        fontWeight: "600",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center" }}>
+        <img src="logo.png" alt="logo" style={{ height: "40px" }} />
       </div>
-      <ul className="nav-links">
+      <ul
+        style={{
+          display: "flex",
+          listStyle: "none",
+          margin: 0,
+          padding: 0,
+          gap: "20px",
+        }}
+      >
         <li>
-          <a href="#home" onClick={() => scrollToSection("home")}>
+          <a
+            href="#home"
+            onClick={() => scrollToSection("home")}
+            style={{ textDecoration: "none", color: "black", fontSize: "14px" }}
+          >
             Home
           </a>
         </li>
         <li>
-          <a href="#booking" onClick={() => scrollToSection("booking")}>
+          <a
+            href="#booking"
+            onClick={() => scrollToSection("booking")}
+            style={{ textDecoration: "none", color: "black", fontSize: "14px" }}
+          >
             Booking
           </a>
         </li>
         <li>
-          <a href="#about" onClick={() => scrollToSection("about")}>
+          <a
+            href="#about"
+            onClick={() => scrollToSection("about")}
+            style={{ textDecoration: "none", color: "black", fontSize: "14px" }}
+          >
             About
           </a>
         </li>
@@ -36,20 +65,44 @@ const NavbarAl = () => {
           <a
             href="#vehicle-models"
             onClick={() => scrollToSection("vehicle-models")}
+            style={{ textDecoration: "none", color: "black", fontSize: "14px" }}
           >
             Vehicle Models
           </a>
         </li>
         <li>
-          <a href="#contact" onClick={() => scrollToSection("contact")}>
+          <a
+            href="#contact"
+            onClick={() => scrollToSection("contact")}
+            style={{ textDecoration: "none", color: "black", fontSize: "14px" }}
+          >
             Contact
           </a>
         </li>
       </ul>
-      <div className="cta-buttons">
-        <button className="userName">Hi Mirali</button>
-        <Link to="/profile" className="profile-link">
-          <FaUserCircle size={30} className="profile-icon" />{" "}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+        }}
+      >
+        <button
+          style={{
+            backgroundColor: "#3e3027",
+            color: "white",
+            border: "none",
+            padding: "6px 16px",
+            borderRadius: "6px",
+            fontWeight: "bold",
+            cursor: "pointer",
+            fontSize: "14px",
+          }}
+        >
+          Hi, Mirali
+        </button>
+        <Link to="/profile" style={{ textDecoration: "none", color: "black" }}>
+          <FaUserCircle size={32} style={{ color: "#3e3027" }} />
         </Link>
       </div>
     </nav>

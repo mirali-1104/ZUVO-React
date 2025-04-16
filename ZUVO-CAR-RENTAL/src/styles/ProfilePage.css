@@ -38,8 +38,8 @@
 }
 
 .logo svg {
-  width: 40px;
-  height: 24px;
+  width: 4px;
+  height: 2px;
 }
 
 .logo-text {
@@ -347,7 +347,25 @@
   cursor: pointer;
   font-weight: 500;
 }
-
+.accept{
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background-color: green;
+  color: white;
+  cursor: pointer;
+  font-weight: 500;
+  margin: 10px;
+}
+.decline{
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background-color: red;
+  color: white;
+  cursor: pointer;
+  font-weight: 500;
+}
 .transaction-item,
 .booking-item {
   display: flex;

@@ -4,7 +4,7 @@ import { useRef } from "react";
 import "../styles/ProfilePage.css";
 import { Edit, Check, User } from "lucide-react";
 
-const ProfilePage = () => {
+const AdminProfilePage = () => {
   const personalInfoRef = useRef(null);
   const drivingLicenseRef = useRef(null);
   const paymentBillingRef = useRef(null);
@@ -18,60 +18,17 @@ const ProfilePage = () => {
 
   return (
     <div className="app">
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          backgroundColor: "#d8cfb3",
-          padding: "10px 30px",
-          fontFamily: "Arial, sans-serif",
-          position: "fixed",
-          width: "100%",
-          zIndex : "10"
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{ height: "40px" }}>
-            <img src="logo.png" alt="Logo" style={{ height: "100%" }} />
+      <header className="header">
+        <div className="logo-container">
+          <div className="logo">
+            <img src="logo.png" alt="" />
           </div>
         </div>
-
-        <h1 style={{ fontSize: "20px", fontWeight: "bold", margin: 0 , color:"#41372d"}}>
-          My Account
-        </h1>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button
-            style={{
-              backgroundColor: "#3e3027",
-              color: "white",
-              border: "none",
-              padding: "6px 12px",
-              borderRadius: "6px",
-              fontWeight: "bold",
-              cursor: "pointer",
-              fontSize: "13px",
-            }}
-          >
-            Become a Host
-          </button>
-          <button
-            style={{
-              backgroundColor: "#3e3027",
-              color: "white",
-              border: "none",
-              padding: "6px 12px",
-              borderRadius: "6px",
-              fontWeight: "bold",
-              cursor: "pointer",
-              fontSize: "13px",
-            }}
-          >
-            Name
-          </button>
-          <div>
-            <User size={32} color="#3e3027" />
+        <h1 className="page-title">Admin</h1>
+        <div className="header-actions">
+          <button className="name-button">Name</button>
+          <div className="user-icon">
+            <User size={24} color="#fff" />
           </div>
         </div>
       </header>
@@ -246,6 +203,23 @@ const ProfilePage = () => {
                     <p>Date: 26 Jan - 28 Jan</p>
                     <p>Location: Ahmedabad, Street 234, 438032</p>
                   </div>
+                  <button className="accept">Accept</button>
+                  <button className="decline">Decline</button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div ref={bookingsRef} className="content-section">
+            <h2 className="section-title">Bookings</h2>
+            <div className="bookings-content">
+              {["Model1", "Model2", "Model3", "Model4"].map((model, index) => (
+                <div className="booking-item" key={index}>
+                  <img src={`${model}.png`} alt="Car" />
+                  <div className="booking-details">
+                    <p>ID: 1234567</p>
+                    <p>Date: 26 Jan - 28 Jan</p>
+                    <p>Location: Ahmedabad, Street 234, 438032</p>
+                  </div>
                   <button className="download-invoice-button">
                     Download Invoice
                   </button>
@@ -259,4 +233,4 @@ const ProfilePage = () => {
   );
 };
 
-export default ProfilePage;
+export default AdminProfilePage;
