@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import SocialNetworkSection from "../components/HomePageComponents/SocialNetworkSection";
-import {Link} from "react-router-dom";
+import { Link } from "react-router-dom";
 
 const CarSharingLanding = () => {
   const [brand, setBrand] = useState("");
@@ -58,7 +58,7 @@ const CarSharingLanding = () => {
             Join thousands of hosts earning up to ₹50,000/month by sharing their
             vehicles. Flexible options, full control, and extra income.
           </p>
-          <Link to="/host-page">
+          <Link to="/host-login">
             <button
               style={{
                 padding: "10px 20px",

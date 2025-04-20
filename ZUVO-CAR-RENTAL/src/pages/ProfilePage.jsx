@@ -1,20 +1,311 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
+import axios from "axios";
 import "../styles/ProfilePage.css";
-import { Edit, Check, User } from "lucide-react";
+import { Edit, Check, User, Upload } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 const ProfilePage = () => {
   const personalInfoRef = useRef(null);
   const drivingLicenseRef = useRef(null);
   const paymentBillingRef = useRef(null);
   const bookingsRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  const { user } = useAuth();
+  const [userData, setUserData] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+  useEffect(() => {
+    if (error) {
+      alert(error);
+      setError(null); // Clear the error after showing it
+    }
+  }, [error]);
+
+  const fetchUserData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token = localStorage.getItem("authToken");
+      console.log("Token being sent:", token);
+
+      if (!token) {
+        throw new Error("No authentication token found. Please login again.");
+      }
+
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/users/profile`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data) {
+        setUserData(response.data);
+      } else {
+        throw new Error("No data received from server");
+      }
+    } catch (error) {
+      console.error("Detailed error:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+
+      let errorMessage = "Failed to fetch user data";
+      if (error.response?.status === 401) {
+        errorMessage = "Session expired. Please login again.";
+        localStorage.removeItem("authToken");
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [walletStatus, setWalletStatus] = useState(null);
+  const [walletId, setWalletId] = useState(null);
+
+  // ... (keep all your existing useEffect and other functions)
+
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handleLinkWallet = async () => {
+    setWalletLoading(true);
+    setWalletStatus(null);
+
+    try {
+      // Load Razorpay script
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        throw new Error("Razorpay SDK failed to load");
+      }
+
+      // Create order on backend
+      const token = localStorage.getItem("authToken");
+      const orderResponse = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/payments/create-order`,
+        { amount: 100, currency: "INR" },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const options = {
+        key: "rzp_test_jVqdtFwidymhM3", // Replace with your test key
+        amount: orderResponse.data.amount,
+        currency: orderResponse.data.currency,
+        name: "ZUVO",
+        description: "Wallet Linking",
+        order_id: orderResponse.data.id,
+        handler: async function (response) {
+          try {
+            // Verify payment on backend
+            const verification = await axios.post(
+              `${import.meta.env.VITE_API_URL}/api/payments/verify`,
+              {
+                order_id: response.razorpay_order_id,
+                payment_id: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+
+            if (verification.data.success) {
+              setWalletStatus("success");
+              setWalletId(verification.data.walletId);
+              // Update user data to reflect wallet linking
+              fetchUserData();
+            } else {
+              setWalletStatus("verification_failed");
+            }
+          } catch (error) {
+            console.error("Verification error:", error);
+            setWalletStatus("error");
+          }
+        },
+        prefill: {
+          name: userData.name || "User",
+          email: userData.email || "user@example.com",
+          contact: userData.mobile || "9876543210",
+        },
+        notes: {
+          userId: userData._id,
+          purpose: "Wallet linking",
+        },
+        theme: {
+          color: "#3399cc",
+        },
+        method: {
+          wallet: true,
+        },
+        wallet: {
+          name: "payzapp", // Default wallet
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+
+      rzp.on("payment.failed", (response) => {
+        console.error("Payment failed:", response.error);
+        setWalletStatus("failed");
+      });
+
+      rzp.open();
+    } catch (error) {
+      console.error("Wallet linking error:", error);
+      setWalletStatus("error");
+    } finally {
+      setWalletLoading(false);
+    }
+  };
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        throw new Error("No authentication token found. Please login again.");
+      }
+
+      const response = await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/users/profile`,
+        userData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      setUserData(response.data);
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error saving user data:", error);
+      let errorMessage = "Failed to save user data";
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      setError(errorMessage);
+    }
+  };
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Add file validation
+    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+
+    if (!validTypes.includes(file.type)) {
+      setError("Please upload a JPEG, PNG, GIF, or WebP image");
+      return;
+    }
+
+    if (file.size > maxSize) {
+      setError("File size must be less than 5MB");
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setError(null);
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        throw new Error("No authentication token found. Please login again.");
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/users/profile/picture`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Update the user data with the new profile image
+      setUserData(prevData => ({
+        ...prevData,
+        profilePicture: response.data.profilePicture
+      }));
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      let errorMessage = "Failed to upload profile picture";
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      setError(errorMessage);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const scrollToSection = (ref) => {
     if (ref.current) {
       ref.current.scrollIntoView({ behavior: "smooth" });
     }
   };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  // if (error) {
+  //   return <div>{error}</div>;
+  // }
+
+  if (!userData) {
+    return <div>No user data found</div>;
+  }
+
+  const isProfileComplete =
+    userData.name && userData.email && userData.mobile && userData.address;
 
   return (
     <div className="app">
@@ -28,7 +319,7 @@ const ProfilePage = () => {
           fontFamily: "Arial, sans-serif",
           position: "fixed",
           width: "100%",
-          zIndex : "10"
+          zIndex: "10",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -37,7 +328,14 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        <h1 style={{ fontSize: "20px", fontWeight: "bold", margin: 0 , color:"#41372d"}}>
+        <h1
+          style={{
+            fontSize: "20px",
+            fontWeight: "bold",
+            margin: 0,
+            color: "#41372d",
+          }}
+        >
           My Account
         </h1>
 
@@ -68,7 +366,7 @@ const ProfilePage = () => {
               fontSize: "13px",
             }}
           >
-            Name
+            {userData.name || "Name"}
           </button>
           <div>
             <User size={32} color="#3e3027" />
@@ -79,17 +377,40 @@ const ProfilePage = () => {
       <div className="content-container">
         <aside className="sidebar">
           <div className="profile-section">
-            <div className="avatar">
-              <User size={60} color="#4B3A2A" />
+            <div
+              className="avatar"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {userData?.profilePicture ? (
+                <img
+                  src={`${import.meta.env.VITE_API_URL}${userData.profilePicture}`}
+                  alt="Profile"
+                  style={{ width: "100%", height: "100%", borderRadius: "50%" }}
+                />
+              ) : (
+                <User size={60} color="#4B3A2A" />
+              )}
+              {isEditing && (
+                <div className="upload-overlay">
+                  <Upload size={24} color="#fff" />
+                </div>
+              )}
             </div>
-            <h3 className="profile-name">Person Name</h3>
-            <p className="profile-phone">8849593953</p>
-            <p className="profile-email">abcd@gmail.com</p>
+            <input
+              type="file"
+              ref={fileInputRef}
+              style={{ display: "none" }}
+              onChange={handleFileUpload}
+              accept="image/*"
+            />
+            <h3 className="profile-name">{userData?.name || "Person Name"}</h3>
+            <p className="profile-phone">{userData?.mobile || "No phone number"}</p>
+            <p className="profile-email">{userData?.email || "No email"}</p>
             <div className="profile-actions">
-              <button className="action-button">
+              <button className="action-button" onClick={handleEdit}>
                 <Edit size={20} color="#fff" />
               </button>
-              <button className="action-button">
+              <button className="action-button" onClick={handleSave}>
                 <Check size={20} color="#fff" />
               </button>
             </div>
@@ -124,6 +445,15 @@ const ProfilePage = () => {
         </aside>
 
         <main className="main-content">
+          {!isProfileComplete && (
+            <div className="complete-profile-prompt">
+              <h2>Complete Your Profile</h2>
+              <p>
+                Please fill in the missing details to complete your profile.
+              </p>
+            </div>
+          )}
+
           <div ref={personalInfoRef} className="content-section">
             <center>
               <h2 className="section-title">Personal Information</h2>
@@ -132,15 +462,25 @@ const ProfilePage = () => {
               <h3 className="subsection-title">Account Details</h3>
               <div className="form-group">
                 <label>Email</label>
-                <input type="email" value="abcd@gmail.com" readOnly />
+                <input
+                  type="email"
+                  value={userData.email || ""}
+                  readOnly={!isEditing}
+                  onChange={(e) =>
+                    setUserData({ ...userData, email: e.target.value })
+                  }
+                />
               </div>
               <div className="form-group">
                 <label>Mobile</label>
-                <input type="tel" value="8849593953" readOnly />
-              </div>
-              <div className="form-group">
-                <label>Username</label>
-                <input type="text" value="abcd@gmail.com" readOnly />
+                <input
+                  type="tel"
+                  value={userData.mobile || ""}
+                  readOnly={!isEditing}
+                  onChange={(e) =>
+                    setUserData({ ...userData, mobile: e.target.value })
+                  }
+                />
               </div>
             </div>
 
@@ -148,22 +488,46 @@ const ProfilePage = () => {
               <h3 className="subsection-title">Personal Details</h3>
               <div className="form-group">
                 <label>Name</label>
-                <input type="text" value="Miraliba Jadeja" readOnly />
+                <input
+                  type="text"
+                  value={userData.name || ""}
+                  readOnly={!isEditing}
+                  onChange={(e) =>
+                    setUserData({ ...userData, name: e.target.value })
+                  }
+                />
               </div>
               <div className="form-group">
                 <label>Gender</label>
-                <input type="text" value="Female" readOnly />
+                <input
+                  type="text"
+                  value={userData.gender || ""}
+                  readOnly={!isEditing}
+                  onChange={(e) =>
+                    setUserData({ ...userData, gender: e.target.value })
+                  }
+                />
               </div>
               <div className="form-group">
                 <label>Date of Birth</label>
-                <input type="text" placeholder="DD/MM/YYYY" readOnly />
+                <input
+                  type="date"
+                  value={userData.dob || ""}
+                  readOnly={!isEditing}
+                  onChange={(e) =>
+                    setUserData({ ...userData, dob: e.target.value })
+                  }
+                />
               </div>
               <div className="form-group">
                 <label>Address</label>
                 <input
                   type="text"
-                  value="addr, dist, tdfsdfdsfsd, 332434"
-                  readOnly
+                  value={userData.address || ""}
+                  readOnly={!isEditing}
+                  onChange={(e) =>
+                    setUserData({ ...userData, address: e.target.value })
+                  }
                 />
               </div>
             </div>
@@ -175,19 +539,36 @@ const ProfilePage = () => {
             </center>
             <div className="form-group">
               <label>License No</label>
-              <input type="text" value="ABCD123CD" readOnly />
+              <input
+                type="text"
+                value={userData.licenseNo || ""}
+                readOnly={!isEditing}
+                onChange={(e) =>
+                  setUserData({ ...userData, licenseNo: e.target.value })
+                }
+              />
             </div>
             <div className="form-group">
               <label>Issue Date</label>
-              <input type="date" readOnly />
+              <input
+                type="date"
+                value={userData.issueDate || ""}
+                readOnly={!isEditing}
+                onChange={(e) =>
+                  setUserData({ ...userData, issueDate: e.target.value })
+                }
+              />
             </div>
             <div className="form-group">
               <label>Expiry Date</label>
-              <input type="date" value="abcd@gmail.com" readOnly />
-            </div>
-            <div className="form-group">
-              <label>Upload Photo</label>
-              <input type="file" name="" id="" />
+              <input
+                type="date"
+                value={userData.expiryDate || ""}
+                readOnly={!isEditing}
+                onChange={(e) =>
+                  setUserData({ ...userData, expiryDate: e.target.value })
+                }
+              />
             </div>
           </div>
 
@@ -198,39 +579,64 @@ const ProfilePage = () => {
             <div className="payment-billing-content">
               <div className="wallet-status">
                 <h3>PAYTM WALLET</h3>
-                <p>Wallet Status: Not Linked</p>
-                <button className="link-wallet-button">Link Wallet</button>
+                <p>
+                  Wallet Status:{" "}
+                  {userData.walletLinked ? "Linked" : "Not Linked"}
+                </p>
+                {!userData.walletLinked ? (
+                  <>
+                    <button
+                      onClick={handleLinkWallet}
+                      disabled={walletLoading}
+                      className="link-wallet-button"
+                    >
+                      {walletLoading ? "Processing..." : "Link Wallet"}
+                    </button>
+                    {walletStatus === "success" && (
+                      <div className="wallet-status-message success">
+                        <p>Wallet linked successfully!</p>
+                        {walletId && <p>Wallet ID: {walletId}</p>}
+                      </div>
+                    )}
+                    {walletStatus === "failed" && (
+                      <div className="wallet-status-message error">
+                        <p>Wallet linking failed. Please try again.</p>
+                      </div>
+                    )}
+                    {walletStatus === "error" && (
+                      <div className="wallet-status-message error">
+                        <p>An error occurred. Please try again later.</p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="wallet-status-message success">
+                    <p>Your wallet is linked</p>
+                    {userData.walletId && <p>Wallet ID: {userData.walletId}</p>}
+                  </div>
+                )}
               </div>
               <div className="balance-info">
                 <h3>Balance</h3>
-                <h3>₹3200</h3>
+                <h3>₹{userData.balance || "0"}</h3>
               </div>
               <div className="transactions">
                 <h3>Transactions</h3>
-                <div className="transaction-item">
-                  <img src="Model1.png" alt="Car" />
-                  <div className="transaction-details">
-                    <p>ID: 1234567</p>
-                    <p>Car: Maruti Suzuki</p>
-                    <p>Amount: ₹5000</p>
-                    <p>Mode: Paypal</p>
-                  </div>
-                  <button className="download-invoice-button">
-                    Download Invoice
-                  </button>
-                </div>
-                <div className="transaction-item">
-                  <img src="Model2.png" alt="Car" />
-                  <div className="transaction-details">
-                    <p>ID: 1234567</p>
-                    <p>Car: Maruti Suzuki</p>
-                    <p>Amount: ₹5000</p>
-                    <p>Mode: Paypal</p>
-                  </div>
-                  <button className="download-invoice-button">
-                    Download Invoice
-                  </button>
-                </div>
+                {userData.transactions &&
+                  userData.transactions.map((transaction, index) => (
+                    <div className="transaction-item" key={index}>
+                      <img src={transaction.modelImage} alt="Car" />
+                      <div className="transaction-details">
+                        <p>ID: {transaction.id}</p>
+                        <p>Car: {transaction.car}</p>
+                        <p>Amount: ₹{transaction.amount}</p>
+                        <p>Mode: {transaction.mode}</p>
+                      </div>
+                      <button className="download-invoice-button">
+                        Download Invoice
+                      </button>
+                    </div>
+                  ))}
               </div>
             </div>
           </div>
@@ -238,19 +644,20 @@ const ProfilePage = () => {
           <div ref={bookingsRef} className="content-section">
             <h2 className="section-title">Bookings</h2>
             <div className="bookings-content">
-              {["Model1", "Model2", "Model3", "Model4"].map((model, index) => (
-                <div className="booking-item" key={index}>
-                  <img src={`${model}.png`} alt="Car" />
-                  <div className="booking-details">
-                    <p>ID: 1234567</p>
-                    <p>Date: 26 Jan - 28 Jan</p>
-                    <p>Location: Ahmedabad, Street 234, 438032</p>
+              {userData.bookings &&
+                userData.bookings.map((booking, index) => (
+                  <div className="booking-item" key={index}>
+                    <img src={booking.modelImage} alt="Car" />
+                    <div className="booking-details">
+                      <p>ID: {booking.id}</p>
+                      <p>Date: {booking.date}</p>
+                      <p>Location: {booking.location}</p>
+                    </div>
+                    <button className="download-invoice-button">
+                      Download Invoice
+                    </button>
                   </div>
-                  <button className="download-invoice-button">
-                    Download Invoice
-                  </button>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         </main>

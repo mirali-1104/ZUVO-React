@@ -32,13 +32,12 @@ exports.registerUser = async (req, res) => {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
     const verificationToken = crypto.randomBytes(20).toString("hex");
 
     // Create user
     const newUser = new User({
       email,
-      password: hashedPassword,
+      password: password,
       isVerified: false,
       emailVerificationToken: verificationToken,
       tokenExpires: Date.now() + 24 * 3600 * 1000, // 24 hours expiration

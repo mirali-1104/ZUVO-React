@@ -6,6 +6,14 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "F:/RP - ZUVO/ZUVO-React/ZUVO-CAR-RENTAL/src/styles/LoginSignUp.css";
 
+// Create axios instance with default config
+const api = axios.create({
+  baseURL: "http://localhost:5000/api",
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
 const Login = ({ toggleForm }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -23,30 +31,85 @@ const Login = ({ toggleForm }) => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(
-        "http://localhost:5000/api/users/login",
-        {
-          email: formData.email,
-          password: formData.password,
-        }
-      );
-
-      // Store the token in localStorage or context
-      localStorage.setItem("authToken", response.data.token);
-
-      // Show success message
-      toast.success("Login successful!", {
-        position: "top-center",
+      console.log('Attempting login with:', formData.email);
+      const response = await api.post("/users/login", {
+        email: formData.email,
+        password: formData.password,
       });
 
-      // Redirect to home page
-      navigate("/home-after-login");
+      if (response.data.success) {
+        // Store the token in localStorage
+        localStorage.setItem("authToken", response.data.token);
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+
+        // Show success message
+        toast.success("Login successful!", {
+          position: "top-center",
+        });
+
+        // Redirect to home page
+        navigate("/home-after-login");
+      } else {
+        toast.error(response.data.error || "Login failed", {
+          position: "top-center",
+        });
+      }
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.error || "Login failed. Please try again.";
-      toast.error(errorMessage, {
-        position: "top-center",
-      });
+      console.error('Login error:', error);
+      
+      // Handle different error cases
+      if (error.response) {
+        const errorMessage = error.response.data.error || "Login failed";
+        
+        if (error.response.status === 403) {
+          // Email not verified
+          toast.error(
+            <div>
+              {errorMessage}
+              <br />
+              <button 
+                onClick={() => {
+                  // Add resend verification logic here
+                  console.log('Resend verification clicked');
+                }}
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  color: 'blue', 
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  padding: 0,
+                  marginTop: '5px'
+                }}
+              >
+                Resend verification email
+              </button>
+            </div>,
+            {
+              position: "top-center",
+            }
+          );
+        } else if (error.response.status === 401) {
+          // Invalid credentials
+          toast.error(errorMessage, {
+            position: "top-center",
+          });
+        } else {
+          toast.error(errorMessage, {
+            position: "top-center",
+          });
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        toast.error("No response from server. Please try again later.", {
+          position: "top-center",
+        });
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        toast.error("An error occurred. Please try again.", {
+          position: "top-center",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
