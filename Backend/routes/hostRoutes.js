@@ -8,45 +8,68 @@ const { generateToken } = require("../middleware/auth");
 const { sendVerificationEmail } = require("../utils/emailService");
 const { auth } = require("../middleware/auth");
 const path = require("path");
-const upload = require("../middleware/upload");
 const fs = require("fs");
+const multer = require("multer");
+
+// Configure multer for profile picture upload
+const profileStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, "../uploads/profiles");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const uploadProfile = multer({
+  storage: profileStorage,
+  limits: {
+    fileSize: 2 * 1024 * 1024, // 2MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Invalid file type. Only JPEG, PNG and JPG are allowed."));
+    }
+  },
+});
 
 // Route to register new host
 router.post("/register", async (req, res) => {
   try {
     const { name, email, password, mobile } = req.body;
 
-    // Basic validation
     if (!name || !email || !password) {
-      return res.status(400).json({ error: "Name, email and password are required" });
+      return res
+        .status(400)
+        .json({ error: "Name, email and password are required" });
     }
 
-    // Email format validation
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ error: "Invalid email format" });
     }
 
-    // Password strength validation
     if (password.length < 6) {
       return res
         .status(400)
         .json({ error: "Password must be at least 6 characters" });
     }
 
-    // Check if host already exists
     const existingHost = await Host.findOne({ email });
     if (existingHost) {
       return res.status(409).json({ error: "Host already exists" });
     }
 
-    // Generate verification token
     const verificationToken = crypto.randomBytes(32).toString("hex");
-    const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    console.log("Generated verification token:", verificationToken);
-    console.log("Token expires at:", verificationTokenExpires);
-
-    // Create new host
     const newHost = new Host({
       name,
       email,
@@ -58,13 +81,10 @@ router.post("/register", async (req, res) => {
     });
 
     await newHost.save();
-    console.log("Host saved with verification token");
 
-    // Send verification email
     const emailSent = await sendVerificationEmail(email, verificationToken);
 
     if (!emailSent) {
-      // If email fails to send, still create the account but inform the host
       return res.status(201).json({
         success: true,
         message:
@@ -94,53 +114,45 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// Email verification route
+// Email verification
 router.get("/verify/:token", async (req, res) => {
   try {
     const { token } = req.params;
-    console.log("Verification attempt with token:", token);
 
-    // First try to find host with exact token match
     const host = await Host.findOne({
       verificationToken: token,
       verificationTokenExpires: { $gt: Date.now() },
     });
 
     if (!host) {
-      console.log("No host found with token or token expired");
-      
-      // Check if token exists but is expired
       const expiredHost = await Host.findOne({ verificationToken: token });
       if (expiredHost) {
-        console.log("Token exists but is expired");
         return res.status(400).json({
           success: false,
-          error: "Verification token has expired. Please request a new verification email.",
+          error:
+            "Verification token has expired. Please request a new verification email.",
         });
       }
 
-      // If no host found at all, return invalid token
-      console.log("Invalid token - no matching host found");
       return res.status(400).json({
         success: false,
-        error: "Invalid verification token. Please request a new verification email.",
+        error:
+          "Invalid verification token. Please request a new verification email.",
       });
     }
 
-    console.log("Host found:", host.email);
-    console.log("Token expires at:", host.verificationTokenExpires);
-
-    // Update host verification status
     host.isVerified = true;
     host.verificationToken = undefined;
     host.verificationTokenExpires = undefined;
     await host.save();
 
-    // Return JSON response with redirect URL
     res.json({
       success: true,
-      message: "Email verified successfully! You can now log in to your account.",
-      redirectUrl: `${process.env.FRONTEND_URL || "http://localhost:3000"}/verification-success`,
+      message:
+        "Email verified successfully! You can now log in to your account.",
+      redirectUrl: `${
+        process.env.FRONTEND_URL || "http://localhost:3000"
+      }/verification-success`,
     });
   } catch (err) {
     console.error("Verification error:", err);
@@ -152,35 +164,27 @@ router.get("/verify/:token", async (req, res) => {
   }
 });
 
-// Update login route to check for verification
+// Login
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log("Login attempt for email:", email);
 
-    // Basic validation
     if (!email || !password) {
-      console.log("Missing email or password");
-      return res.status(400).json({
-        success: false,
-        error: "Email and password are required",
-      });
+      return res
+        .status(400)
+        .json({ success: false, error: "Email and password are required" });
     }
 
-    // Find host and explicitly select the password field
     const host = await Host.findOne({ email }).select("+password");
 
     if (!host) {
-      console.log("Host not found for email:", email);
       return res.status(401).json({
         success: false,
         error: "Email not found. Please check your email or sign up.",
       });
     }
 
-    // Check if host is verified
     if (!host.isVerified) {
-      console.log("Host not verified:", email);
       return res.status(403).json({
         success: false,
         error: "Please verify your email address before logging in",
@@ -188,28 +192,15 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    console.log("Host found, comparing passwords...");
-
-    // Ensure password exists before comparison
-    if (!host.password) {
-      console.log("Password field is undefined for host:", email);
-      return res.status(500).json({
-        success: false,
-        error: "Internal server error. Please try again later.",
-      });
-    }
-
     const isMatch = await host.comparePassword(password);
     if (!isMatch) {
-      console.log("Password mismatch for host:", email);
       return res.status(401).json({
         success: false,
         error: "Incorrect password. Please try again.",
       });
     }
 
-    console.log("Password match, generating token...");
-    const token = generateToken(host);
+    const token = generateToken(host, "host");
 
     res.json({
       success: true,
@@ -217,7 +208,7 @@ router.post("/login", async (req, res) => {
       host: {
         id: host._id,
         email: host.email,
-        name: host.name, // Include name in response
+        name: host.name,
       },
     });
   } catch (err) {
@@ -230,7 +221,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Resend verification email route
+// Resend verification email
 router.post("/resend-verification", async (req, res) => {
   try {
     const { email } = req.body;
@@ -244,7 +235,6 @@ router.post("/resend-verification", async (req, res) => {
       return res.status(400).json({ error: "Email is already verified" });
     }
 
-    // Generate new verification token
     const verificationToken = crypto.randomBytes(32).toString("hex");
     const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
@@ -252,7 +242,6 @@ router.post("/resend-verification", async (req, res) => {
     host.verificationTokenExpires = verificationTokenExpires;
     await host.save();
 
-    // Send new verification email
     const emailSent = await sendVerificationEmail(email, verificationToken);
 
     if (!emailSent) {
@@ -276,11 +265,11 @@ router.post("/resend-verification", async (req, res) => {
 // Update host name
 router.put("/update-name", auth, async (req, res) => {
   const { name } = req.body;
-  const hostId = req.host.hostId; // extracted from token
+  const hostId = req.host.hostId;
 
   try {
     const updatedHost = await Host.findByIdAndUpdate(
-      HostId,
+      hostId,
       { name },
       { new: true }
     ).select("-password");
@@ -313,84 +302,130 @@ router.get("/profile", auth, async (req, res) => {
   }
 });
 
-// Update host profile (excluding profile picture)
-router.put("/profile", auth, async (req, res) => {
-  try {
-    const { name, email, phone } = req.body;
-
-    // Build update object
-    const updateFields = {};
-    if (name) updateFields.name = name;
-    if (email) updateFields.email = email;
-    if (phone) updateFields.phone = phone;
-
-    const updatedHost = await Host.findByIdAndUpdate(
-      req.host._id,
-      updateFields,
-      { new: true }
-    ).select("-password");
-
-    res.json(updatedHost);
-  } catch (error) {
-    console.error("Error updating profile:", error);
-    res
-      .status(500)
-      .json({ message: "Error updating profile", error: error.message });
-  }
-});
-
-// Upload profile picture
-router.post(
-  "/profile/picture",
+// Update host profile (including profile picture)
+router.put(
+  "/profile",
   auth,
-  upload.single("file"),
+  uploadProfile.single("profilePicture"),
   async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ message: "No profile picture uploaded" });
+      const { name, email, mobile, address, licenseNo, issueDate, expiryDate } =
+        req.body;
+
+      const updateFields = {
+        name,
+        email,
+        mobile,
+        address,
+        licenseNo,
+        issueDate,
+        expiryDate,
+      };
+
+      if (req.file) {
+        const host = await Host.findById(req.host._id);
+        if (host.profilePicture) {
+          const oldPicturePath = path.join(
+            __dirname,
+            "..",
+            host.profilePicture
+          );
+          if (fs.existsSync(oldPicturePath)) {
+            fs.unlinkSync(oldPicturePath);
+          }
+        }
+        updateFields.profilePicture = `/uploads/profiles/${req.file.filename}`;
       }
 
-      // Get the file path
-      const filePath = `/uploads/${req.file.filename}`;
-
-      // Update only the profilePicture field
       const updatedHost = await Host.findByIdAndUpdate(
         req.host._id,
-        { $set: { profilePicture: filePath } },
+        updateFields,
         { new: true }
       ).select("-password");
 
-      if (!updatedHost) {
-        return res.status(404).json({ message: "Host not found" });
-      }
-
       res.json({
-        profilePicture: updatedHost.profilePicture,
+        success: true,
+        message: "Profile updated successfully",
+        host: updatedHost,
       });
     } catch (error) {
-      console.error("Error uploading profile picture:", error);
-
-      // Handle multer errors
-      if (error.name === "MulterError") {
-        if (error.code === "LIMIT_FILE_SIZE") {
-          return res
-            .status(400)
-            .json({ message: "File size too large. Maximum size is 2MB." });
-        }
-        return res.status(400).json({ message: error.message });
-      }
-
+      console.error("Error updating profile:", error);
       res.status(500).json({
-        message: "Error uploading profile picture",
-        error:
-          process.env.NODE_ENV === "development"
-            ? error.message
-            : "Internal server error",
+        success: false,
+        error: "Failed to update profile",
+        details: error.message,
       });
     }
   }
 );
 
+// Test route
 router.get("/test", (req, res) => res.send("Host routes working"));
+
+// Debug token route
+router.get("/debug-token", async (req, res) => {
+  try {
+    const token = req.header("Authorization")?.replace("Bearer ", "");
+    
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        error: "No token provided"
+      });
+    }
+    
+    // Try to decode without verification
+    const decodedRaw = jwt.decode(token);
+    
+    // Try to verify
+    let verifiedToken;
+    let isValid = false;
+    try {
+      verifiedToken = jwt.verify(token, process.env.JWT_SECRET);
+      isValid = true;
+    } catch (err) {
+      verifiedToken = { error: err.message };
+    }
+    
+    res.json({
+      success: true,
+      token_preview: token.substring(0, 20) + "...",
+      decoded_raw: decodedRaw,
+      verified: isValid,
+      verified_token: verifiedToken
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: "Token debugging failed",
+      details: err.message
+    });
+  }
+});
+
+// Debug endpoint to check hosts
+router.get("/debug-hosts", async (req, res) => {
+  try {
+    // Only return limited host info for security
+    const hosts = await Host.find().select('_id name email isVerified').limit(10);
+    
+    res.json({
+      success: true,
+      count: hosts.length,
+      hosts: hosts.map(host => ({
+        id: host._id,
+        name: host.name,
+        email: host.email,
+        isVerified: host.isVerified
+      }))
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: "Could not fetch hosts",
+      details: err.message
+    });
+  }
+});
 
 module.exports = router;

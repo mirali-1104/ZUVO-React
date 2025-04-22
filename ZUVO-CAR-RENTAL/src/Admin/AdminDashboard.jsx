@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 import {
   PieChart,
   Pie,
@@ -15,46 +16,103 @@ import {
   Legend,
 } from "recharts";
 
-const bookingData = [
-  { name: "Jan", value: 800 },
-  { name: "Feb", value: 650 },
-  { name: "Mar", value: 700 },
-  { name: "Apr", value: 600 },
-  { name: "May", value: 400 },
-  { name: "Jun", value: 600 },
-  { name: "Jul", value: 950 },
-  { name: "Aug", value: 1200 },
-  { name: "Sep", value: 850 },
-  { name: "Oct", value: 900 },
-  { name: "Nov", value: 700 },
-  { name: "Dec", value: 680 },
-];
-
-const pieData = [
-  { name: "Hired", value: 52 },
-  { name: "Pending", value: 27 },
-  { name: "Cancelled", value: 21 },
-];
-
-const COLORS = ["#58A06E", "#D3A048", "#DA524E"];
-
-const carTypes = [
-  { name: "Baleno", percent: 30, img: "/Model1.png" },
-  { name: "Ertiga", percent: 25, img: "/Model2.png" },
-  { name: "Swift", percent: 50, img: "/Model3.png" },
-  { name: "Breeza", percent: 35, img: "/Model4.png" },
-  { name: "S-Presso", percent: 45, img: "/Model5.png" },
-  { name: "S-Presso", percent: 46, img: "/Model6.png" },
-];
-
-const menuItems = [
-  { label: "Dashboard", icon: "📊", path: "/admin" },
-  { label: "Bookings", icon: "📑", path: "/admin-bookings" },
-  { label: "Units", icon: "🚗", path: "/admin-units" },
-  { label: "Clients", icon: "👥", path: "/admin-clients" },
-  { label: "Payments", icon: "💳", path: "/admin-payments" },
-];
 const AdminDashboard = () => {
+  const [carTypes, setCarTypes] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    brand: "",
+    name: "",
+    totalUnits: "",
+    bookedUnits: "",
+    pricePerDay: "",
+  });
+  const [file, setFile] = useState(null);
+
+  const bookingData = [
+    { name: "Jan", value: 800 },
+    { name: "Feb", value: 650 },
+    { name: "Mar", value: 700 },
+    { name: "Apr", value: 600 },
+    { name: "May", value: 400 },
+    { name: "Jun", value: 600 },
+    { name: "Jul", value: 950 },
+    { name: "Aug", value: 1200 },
+    { name: "Sep", value: 850 },
+    { name: "Oct", value: 900 },
+    { name: "Nov", value: 700 },
+    { name: "Dec", value: 680 },
+  ];
+
+  const pieData = [
+    { name: "Hired", value: 52 },
+    { name: "Pending", value: 27 },
+    { name: "Cancelled", value: 21 },
+  ];
+
+  const COLORS = ["#58A06E", "#D3A048", "#DA524E"];
+
+  const menuItems = [
+    { label: "Dashboard", icon: "📊", path: "/admin/dashboard" },
+    { label: "Bookings", icon: "📑", path: "/admin-bookings" },
+    { label: "Units", icon: "🚗", path: "/admin-units" },
+    { label: "Clients", icon: "👥", path: "/admin-clients" },
+    { label: "Payments", icon: "💳", path: "/admin-payments" },
+  ];
+
+  const fetchData = async () => {
+    const res = await axios.get("http://localhost:5000/api/carType/car-types");
+    setCarTypes(res.data);
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append("brand", form.brand);
+    formData.append("name", form.name);
+    formData.append("totalUnits", form.totalUnits);
+    formData.append("bookedUnits", form.bookedUnits);
+    formData.append("pricePerDay", form.pricePerDay);
+    formData.append("image", file);
+
+    // Log FormData contents
+    for (let [key, value] of formData.entries()) {
+      console.log(key, value);
+    }
+
+    try {
+      const res = await axios.post("http://localhost:5000/api/carType/add", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      setShowForm(false);
+      setForm({
+        brand: "",
+        name: "",
+        totalUnits: "",
+        bookedUnits: "",
+        pricePerDay: "",
+      });
+      setFile(null);
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      // Handle error
+    }
+  };
+
   return (
     <div
       style={{
@@ -144,14 +202,14 @@ const AdminDashboard = () => {
           </h1>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <Link to="/admin-profile">
-            <div
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "50%",
-                backgroundColor: "gray",
-              }}
-            ></div>
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "50%",
+                  backgroundColor: "gray",
+                }}
+              ></div>
             </Link>
             <div>
               <p style={{ fontSize: "14px", fontWeight: "bold" }}>Admin Name</p>
@@ -393,7 +451,11 @@ const AdminDashboard = () => {
               borderRadius: "10px",
             }}
           >
-            <h3>Car Types</h3>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <h3>Car Types</h3>
+              <button onClick={() => setShowForm(true)}>Add</button>
+            </div>
+
             {carTypes.map((car, i) => (
               <div
                 key={i}
@@ -404,7 +466,7 @@ const AdminDashboard = () => {
                 }}
               >
                 <img
-                  src={car.img}
+                  src={`http://localhost:5000/uploads/${car.img}`}
                   alt={car.name}
                   style={{
                     width: "60px",
@@ -432,9 +494,141 @@ const AdminDashboard = () => {
                     }}
                   ></div>
                 </div>
-                <span>{car.percent}%</span>
+                <span>{car.percent.toFixed(1)}%</span>
               </div>
             ))}
+
+            {showForm && (
+              <div
+                style={{
+                  position: "fixed",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  background: "#fff",
+                  padding: "30px",
+                  borderRadius: "10px",
+                  boxShadow: "0px 0px 15px rgba(0,0,0,0.3)",
+                  zIndex: 1000,
+                  width: "400px",
+                }}
+              >
+                <h4 style={{ marginBottom: "20px", textAlign: "center", color: "#41372D" }}>Add New Car Type</h4>
+                <form onSubmit={handleSubmit}>
+                  <input
+                    name="brand"
+                    placeholder="Brand"
+                    onChange={handleChange}
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "10px",
+                      marginBottom: "10px",
+                      borderRadius: "5px",
+                      border: "1px solid #ccc",
+                    }}
+                  />
+                  <input
+                    name="name"
+                    placeholder="Car Name"
+                    onChange={handleChange}
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "10px",
+                      marginBottom: "10px",
+                      borderRadius: "5px",
+                      border: "1px solid #ccc",
+                    }}
+                  />
+                  <input
+                    name="totalUnits"
+                    placeholder="Total Units"
+                    type="number"
+                    onChange={handleChange}
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "10px",
+                      marginBottom: "10px",
+                      borderRadius: "5px",
+                      border: "1px solid #ccc",
+                    }}
+                  />
+                  <input
+                    name="bookedUnits"
+                    placeholder="Booked Units"
+                    type="number"
+                    onChange={handleChange}
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "10px",
+                      marginBottom: "10px",
+                      borderRadius: "5px",
+                      border: "1px solid #ccc",
+                    }}
+                  />
+                  <input
+                    name="pricePerDay"
+                    placeholder="Price per day"
+                    type="number"
+                    onChange={handleChange}
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "10px",
+                      marginBottom: "10px",
+                      borderRadius: "5px",
+                      border: "1px solid #ccc",
+                    }}
+                  />
+                  <input
+                    type="file"
+                    onChange={handleFileChange}
+                    required
+                    style={{
+                      marginBottom: "20px",
+                    }}
+                  />
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <button
+                      type="submit"
+                      style={{
+                        padding: "10px 20px",
+                        backgroundColor: "#58A06E",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "5px",
+                        cursor: "pointer",
+                        transition: "background 0.3s",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#4a8a5c")}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#58A06E")}
+                    >
+                      Submit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowForm(false)}
+                      style={{
+                        padding: "10px 20px",
+                        backgroundColor: "#DA524E",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "5px",
+                        cursor: "pointer",
+                        transition: "background 0.3s",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#c44a44")}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#DA524E")}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
           </div>
         </div>
       </div>

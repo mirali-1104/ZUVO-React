@@ -1,21 +1,189 @@
-
 "use client";
-import { Link } from "react-router-dom";
-import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import "F:/RP - ZUVO/ZUVO-React/ZUVO-CAR-RENTAL/src/styles/CarBuy.css";
 import { ArrowLeft, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import NavbarP from "F:/RP - ZUVO/ZUVO-React/ZUVO-CAR-RENTAL/src/components/NavbarP.jsx";
+import axios from "axios";
 
 export default function CarBookingPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [selectedImage, setSelectedImage] = useState(0);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [carData, setCarData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [rentalInfo, setRentalInfo] = useState({
+    days: 0,
+    hours: 5,
+    totalDays: 1,
+  });
 
-  const carImages = [
+  // Default images as fallback
+  const defaultCarImages = [
     "/Model1.png",
     "/Model2.png",
     "/Model3.png",
     "/Model4.png",
   ];
+
+  // Common car features for mapping
+  const commonFeatures = [
+    { key: "airConditioning", name: "Air Conditioning", icon: "❄️" },
+    { key: "powerSteering", name: "Power Steering", icon: "🔄" },
+    { key: "powerWindows", name: "Power Windows", icon: "⚡" },
+    { key: "bluetooth", name: "Bluetooth", icon: "📱" },
+    { key: "childSeat", name: "Child Seat", icon: "👶" },
+    { key: "usb", name: "USB Port", icon: "🔌" },
+    { key: "spareTyre", name: "Spare Tyre", icon: "🛞" },
+    { key: "toolkit", name: "Toolkit", icon: "🧰" },
+    { key: "firstAid", name: "First Aid Kit", icon: "🩹" },
+    { key: "parkingSensors", name: "Parking Sensors", icon: "📡" },
+    { key: "rearCamera", name: "Rear Camera", icon: "📷" },
+    { key: "musicSystem", name: "Music System", icon: "🎵" },
+    { key: "petFriendly", name: "Pet Friendly", icon: "🐾" },
+    { key: "gps", name: "GPS", icon: "🗺️" },
+    { key: "cruiseControl", name: "Cruise Control", icon: "🚗" },
+    { key: "tractionControl", name: "Traction Control", icon: "🔄" },
+    { key: "absSystem", name: "Anti-lock Braking System", icon: "🛑" },
+    { key: "fullBootSpace", name: "Full Boot Space", icon: "📦" },
+  ];
+
+  // Function to handle image URLs
+  const getImageUrl = (photo) => {
+    if (!photo) return null;
+
+    if (photo.startsWith("http")) return photo;
+    if (photo.startsWith("/uploads")) return `http://localhost:5000${photo}`;
+    return photo;
+  };
+
+  // Fetch car details on component mount
+  useEffect(() => {
+    const fetchCarDetails = async () => {
+      try {
+        setLoading(true);
+
+        let vehicleData = null;
+        let rentalDuration = {
+          days: 0,
+          hours: 5,
+          totalDays: 1,
+        };
+
+        // Check if car data and rental info were passed via navigation state
+        if (location.state) {
+          if (location.state.vehicle) {
+            vehicleData = location.state.vehicle;
+            console.log("Car data from navigation:", vehicleData);
+          }
+
+          if (location.state.rentalInfo) {
+            rentalDuration = location.state.rentalInfo;
+            console.log("Rental info from navigation:", rentalDuration);
+            setRentalInfo(rentalDuration);
+          }
+        }
+
+        // If no car data in navigation state, try to get car ID from URL params
+        if (!vehicleData) {
+          const urlParams = new URLSearchParams(location.search);
+          const carId = urlParams.get("id");
+
+          if (carId) {
+            // Fetch car data from API using the ID
+            const response = await axios.get(
+              `http://localhost:5000/api/cars/${carId}`
+            );
+            if (response.data.success) {
+              vehicleData = response.data.car;
+              console.log("Car data from API:", vehicleData);
+            } else {
+              throw new Error("Failed to fetch car details");
+            }
+          } else {
+            throw new Error("No car ID provided");
+          }
+        }
+
+        if (vehicleData) {
+          // Process images
+          let carImages = [];
+          if (vehicleData.photos && vehicleData.photos.length > 0) {
+            carImages = vehicleData.photos
+              .map((photo) => getImageUrl(photo))
+              .filter(Boolean);
+          }
+
+          // If no images found, use defaults
+          if (carImages.length === 0) {
+            carImages = defaultCarImages;
+          }
+
+          // Process features
+          let carFeatures = [];
+
+          // Check if the car has a features property
+          if (
+            vehicleData.features &&
+            typeof vehicleData.features === "object"
+          ) {
+            // Map features from the car data to our feature objects
+            carFeatures = Object.entries(vehicleData.features)
+              .filter(([_, value]) => value === true)
+              .map(([key]) => {
+                const matchedFeature = commonFeatures.find(
+                  (f) => f.key === key
+                );
+                return (
+                  matchedFeature || {
+                    key,
+                    name: key.replace(/([A-Z])/g, " $1").trim(),
+                    icon: "✅",
+                  }
+                );
+              });
+          } else {
+            // If no features found, use some defaults based on car type
+            carFeatures = [
+              { id: 9, name: "Air Conditioning", icon: "❄️" },
+              { id: 6, name: "Power Steering", icon: "🔄" },
+              { id: 7, name: "Spare Tyre", icon: "🛞" },
+              { id: 11, name: "Anti-lock Braking System", icon: "🛑" },
+              { id: 12, name: "Full Boot Space", icon: "📦" },
+            ];
+          }
+
+          // Set the car data
+          setCarData({
+            ...vehicleData,
+            processedImages: carImages,
+            displayName:
+              vehicleData.carName || vehicleData.title || "Unnamed Car",
+            price: vehicleData.rentalPrice || vehicleData.price || 1200,
+            seats: vehicleData.numberOfSeats || vehicleData.seats || 5,
+            transmission: vehicleData.transmission || "Automatic",
+            fuel: vehicleData.fuelTypes || vehicleData.fuelType || "Petrol",
+            host:
+              vehicleData.hostName ||
+              vehicleData.host?.name ||
+              "Anonymous Host",
+            features: carFeatures,
+          });
+        } else {
+          throw new Error("No car data found");
+        }
+      } catch (error) {
+        console.error("Error fetching car details:", error);
+        setError(error.message || "Failed to load car details");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCarDetails();
+  }, [location]);
 
   const reviews = [
     {
@@ -38,20 +206,6 @@ export default function CarBookingPage() {
     },
   ];
 
-  const features = [
-    { id: 1, name: "Pet Friendly", icon: "🐾" },
-    { id: 2, name: "Reverse Camera", icon: "📷" },
-    { id: 3, name: "Traction control", icon: "🔄" },
-    { id: 4, name: "A/C Cable", icon: "❄️" },
-    { id: 5, name: "Child seat", icon: "👶" },
-    { id: 6, name: "Power steering", icon: "🔄" },
-    { id: 7, name: "Spare Tyre", icon: "🛞" },
-    { id: 8, name: "Electric OEM", icon: "⚡" },
-    { id: 9, name: "Air Conditioning", icon: "❄️" },
-    { id: 10, name: "Toolkit", icon: "🧰" },
-    { id: 11, name: "Anti-lock Braking System", icon: "🛑" },
-    { id: 12, name: "Full boot space", icon: "📦" },
-  ];
   const [openIndex, setOpenIndex] = useState(null);
 
   const faqs = [
@@ -65,141 +219,152 @@ export default function CarBookingPage() {
     "Can I cancel or modify my booking?",
     "How do I book a rental car?",
   ];
+
   const handleImageClick = (index) => {
     setSelectedImage(index);
     setShowImageModal(true);
   };
 
   const nextImage = () => {
-    setSelectedImage((prev) => (prev + 1) % carImages.length);
+    if (!carData) return;
+    const imagesArray = carData.processedImages || defaultCarImages;
+    setSelectedImage((prev) => (prev + 1) % imagesArray.length);
   };
 
   const prevImage = () => {
+    if (!carData) return;
+    const imagesArray = carData.processedImages || defaultCarImages;
     setSelectedImage(
-      (prev) => (prev - 1 + carImages.length) % carImages.length
+      (prev) => (prev - 1 + imagesArray.length) % imagesArray.length
     );
   };
+
   const toggleFAQ = (index) => {
     setOpenIndex(openIndex === index ? null : index);
   };
+
+  const handleGoBack = () => {
+    navigate(-1);
+  };
+
+  // Calculate the total rental cost
+  const calculateTotalRentalCost = () => {
+    if (!carData) return 0;
+
+    const basePrice = carData.price * rentalInfo.totalDays;
+    const serviceFee = Math.round(basePrice * 0.05);
+    const protectionFee = 200;
+
+    return {
+      basePrice,
+      serviceFee,
+      protectionFee,
+      total: basePrice + serviceFee + protectionFee,
+    };
+  };
+
+  // Format rental duration for display
+  const formatRentalDuration = () => {
+    const { days, hours } = rentalInfo;
+
+    if (days === 0 && hours > 0) {
+      return `${hours} hours (charged as 1 day)`;
+    } else if (days > 0 && hours === 0) {
+      return `${days} day${days > 1 ? "s" : ""}`;
+    } else {
+      return `${days} day${
+        days > 1 ? "s" : ""
+      } and ${hours} hours (charged as ${days + 1} days)`;
+    }
+  };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <>
+        <NavbarP />
+        <div
+          className="car-booking-container"
+          style={{ padding: "100px 20px", textAlign: "center" }}
+        >
+          <p>Loading car details...</p>
+        </div>
+      </>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <>
+        <NavbarP />
+        <div
+          className="car-booking-container"
+          style={{ padding: "100px 20px", textAlign: "center" }}
+        >
+          <p style={{ color: "red" }}>{error}</p>
+          <button
+            onClick={handleGoBack}
+            style={{
+              marginTop: "20px",
+              padding: "10px 15px",
+              background: "#3d342a",
+              color: "white",
+              border: "none",
+              borderRadius: "5px",
+              cursor: "pointer",
+            }}
+          >
+            Go Back
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  // If no car data, show error
+  if (!carData) {
+    return (
+      <>
+        <NavbarP />
+        <div
+          className="car-booking-container"
+          style={{ padding: "100px 20px", textAlign: "center" }}
+        >
+          <p>No car details available</p>
+          <button
+            onClick={handleGoBack}
+            style={{
+              marginTop: "20px",
+              padding: "10px 15px",
+              background: "#3d342a",
+              color: "white",
+              border: "none",
+              borderRadius: "5px",
+              cursor: "pointer",
+            }}
+          >
+            Go Back
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  // Get the images to display
+  const displayImages = carData.processedImages || defaultCarImages;
+
+  // Get the pricing info
+  const pricingInfo = calculateTotalRentalCost();
+
   return (
     <>
       <NavbarP />
-      <header
-        style={{
-          backgroundColor: "#d9d0b2", // beige background
-          padding: "10px 20px",
-          borderBottom: "1px solid #999",
-        }}
-      >
-        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-          <div
-            style={{
-              backgroundColor: "#8b8169", // brownish-grey background
-              padding: "10px 12px",
-              borderRadius: "8px",
-              color: "#fff",
-              flex: "1",
-              minWidth: "200px",
-              position: "fixed"
-            }}
-          >
-            <span style={{ fontSize: "12px", color: "#ddd" }}>Location</span>
-            <p
-              style={{
-                margin: "4px 0 0 0",
-                fontSize: "14px",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              A2500 University Center, 282 Champions Way...
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              gap: "10px",
-              flexWrap: "wrap",
-              flex: "1",
-              minWidth: "200px",
-            }}
-          >
-            <div
-              style={{
-                backgroundColor: "#8b8169",
-                padding: "10px 12px",
-                borderRadius: "8px",
-                color: "#fff",
-                flex: "1",
-                minWidth: "150px",
-                position: "relative",
-              }}
-            >
-              <span style={{ fontSize: "12px", color: "#ddd" }}>Check-in</span>
-              <p
-                style={{ margin: "4px 0 0 0", fontSize: "14px", color: "#fff" }}
-              >
-                4 Feb'25, 5PM
-              </p>
-              <button
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "#f9b233", // golden edit color
-                  fontWeight: "bold",
-                  cursor: "pointer",
-                  position: "absolute",
-                  top: "10px",
-                  right: "10px",
-                }}
-              >
-                Edit
-              </button>
-            </div>
-
-            <div
-              style={{
-                backgroundColor: "#8b8169",
-                padding: "10px 12px",
-                borderRadius: "8px",
-                color: "#fff",
-                flex: "1",
-                minWidth: "150px",
-                position: "relative",
-              }}
-            >
-              <span style={{ fontSize: "12px", color: "#ddd" }}>Check-out</span>
-              <p
-                style={{ margin: "4px 0 0 0", fontSize: "14px", color: "#fff" }}
-              >
-                4 Feb'25, 10PM
-              </p>
-              <button
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "#f9b233",
-                  fontWeight: "bold",
-                  cursor: "pointer",
-                  position: "absolute",
-                  top: "10px",
-                  right: "10px",
-                }}
-              >
-                Edit
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
 
       <div className="car-booking-container">
         <div className="car-booking-content">
           <div className="car-booking-left">
-            <div className="back-button">
+            <div className="back-button" onClick={handleGoBack}>
               <ArrowLeft size={20} />
               <span>Back</span>
             </div>
@@ -207,18 +372,24 @@ export default function CarBookingPage() {
             <div className="car-gallery">
               <div className="main-image" onClick={() => handleImageClick(0)}>
                 <img
-                  src={carImages[0] || "/placeholder.svg"}
+                  src={displayImages[0] || "/placeholder.svg"}
                   className="main-image1"
-                  alt="Maruti Suzuki Fronx 2023"
+                  alt={carData.displayName}
                 />
                 <img
                   className="main-image2"
-                  src={carImages[3] || "/placeholder.svg"}
-                  alt="Maruti Suzuki Fronx 2023"
+                  src={
+                    displayImages[
+                      displayImages.length > 3
+                        ? 3
+                        : displayImages.length - 1 || 0
+                    ] || "/placeholder.svg"
+                  }
+                  alt={carData.displayName}
                 />
               </div>
               <div className="thumbnail-container">
-                {carImages.slice(1).map((img, index) => (
+                {displayImages.slice(1, 4).map((img, index) => (
                   <div
                     key={index + 1}
                     className="thumbnail"
@@ -226,7 +397,7 @@ export default function CarBookingPage() {
                   >
                     <img
                       src={img || "/placeholder.svg"}
-                      alt={`Car view ${index + 1}`}
+                      alt={`${carData.displayName} view ${index + 1}`}
                     />
                   </div>
                 ))}
@@ -234,17 +405,17 @@ export default function CarBookingPage() {
             </div>
 
             <div className="car-details">
-              <div className="car-badge">Hosted by Niyati Agravat</div>
-              <h1 className="car-title">Maruti Suzuki Fronx 2023</h1>
+              <div className="car-badge">Hosted by {carData.host}</div>
+              <h1 className="car-title">{carData.displayName}</h1>
               <p className="car-subtitle">
-                Manual transmission missing, aircon_unit#2029, 5 Seats
+                {carData.transmission} transmission, {carData.fuel},{" "}
+                {carData.seats} Seats
               </p>
 
               <div className="car-tabs">
                 <span>Reviews</span>
                 <span>Location</span>
                 <span>Features</span>
-                <span>Benefits</span>
                 <span>Cancellation</span>
                 <span>FAQ</span>
                 <span>Agreement</span>
@@ -286,8 +457,8 @@ export default function CarBookingPage() {
               <div className="location-section">
                 <h3>Location</h3>
                 <p className="location-address">
-                  5 Hosur Main Rd, Roopena Agrahara, Anchepalya, Hosur,
-                  Bommanahalli, Karnataka 560068, India
+                  {carData.location ||
+                    "5 Hosur Main Rd, Roopena Agrahara, Anchepalya, Hosur, Bommanahalli, Karnataka 560068, India"}
                 </p>
                 <div className="distance-info">
                   <span>15.1 Kms Away</span>
@@ -298,8 +469,11 @@ export default function CarBookingPage() {
               <div className="features-section">
                 <h3>Features</h3>
                 <div className="features-grid">
-                  {features.map((feature) => (
-                    <div key={feature.id} className="feature-item">
+                  {carData.features.map((feature, index) => (
+                    <div
+                      key={feature.id || feature.key || index}
+                      className="feature-item"
+                    >
                       <span className="feature-icon">{feature.icon}</span>
                       <span className="feature-name">{feature.name}</span>
                     </div>
@@ -314,67 +488,6 @@ export default function CarBookingPage() {
                 padding: "20px",
               }}
             >
-              {/* Benefits */}
-              <h3 style={{ marginBottom: "8px", color: "#41372d" }}>
-                Benefits
-              </h3>
-              <p style={{ margin: "5px 0 15px", color: "#41372d" }}>
-                Journey boldly and explore without limits.
-                <br />
-                Choose a plan & secure your trip
-              </p>
-              <button
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "#8d5b17",
-                  fontWeight: "bold",
-                  float: "right",
-                  marginTop: "-45px",
-                }}
-              >
-                Learn More →
-              </button>
-
-              <div style={{ display: "flex", gap: "12px", margin: "15px 0" }}>
-                {[
-                  { title: "ULTIMATE", price: 499, limit: "₹500" },
-                  { title: "ENHANCED", price: 299, limit: "₹600" },
-                  { title: "STANDARD", price: 99, limit: "₹7500" },
-                ].map((plan, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      backgroundColor: "#6d6552",
-                      borderRadius: "8px",
-                      padding: "12px",
-                      flex: 1,
-                      color: "#fff",
-                      minWidth: "100px",
-                    }}
-                  >
-                    <strong>{plan.title}</strong>
-                    <p style={{ margin: "6px 0" }}>₹ {plan.price}</p>
-                    <small>Only pay {plan.limit} in case of accident</small>
-                  </div>
-                ))}
-              </div>
-
-              {/* Perks */}
-              <h4 style={{ marginTop: "15px" , color : "#41372d"}}>
-                Take advantage of these exclusive perks.
-              </h4>
-              <ul style={{ listStyle: "none", padding: 0, fontSize: "14px", color:"#41372d" }}>
-                <li>
-                  🚗 <strong>No Limits on Distance</strong> — Travel as far as
-                  you want at no extra cost.
-                </li>
-                <li>
-                  🔐 <strong>No Security Deposit</strong> — No upfront deposits,
-                  just hassle-free bookings.
-                </li>
-              </ul>
-
               {/* Cancellation */}
               <div
                 style={{
@@ -384,7 +497,6 @@ export default function CarBookingPage() {
                   marginTop: "20px",
                   borderRadius: "6px",
                   color: "#41372D",
-
                 }}
               >
                 🚫 <strong>Cancellation Unavailable</strong>
@@ -393,7 +505,7 @@ export default function CarBookingPage() {
               </div>
 
               {/* FAQs */}
-              <h4 style={{ margin: "20px 0 10px", color : "#41372D" }}>FAQs</h4>
+              <h4 style={{ margin: "20px 0 10px", color: "#41372D" }}>FAQs</h4>
               <div>
                 {faqs.map((q, i) => (
                   <div
@@ -402,7 +514,7 @@ export default function CarBookingPage() {
                       borderBottom: "1px solid #ddd",
                       padding: "10px 0",
                       cursor: "pointer",
-                      color : "#41372d"
+                      color: "#41372d",
                     }}
                     onClick={() => toggleFAQ(i)}
                   >
@@ -463,27 +575,44 @@ export default function CarBookingPage() {
 
           <div className="car-booking-right">
             <div className="payment-container">
-              <h2 style={{ color: "black" }}>Exclusive Offers</h2>
-
-              <div className="offers-carousel">
-                <div className="offer-card">
-                  <div className="offer-icon">🔥</div>
-                  <div className="offer-content">
-                    <h4 style={{ color: "black" }}>Explore Offers</h4>
-                    <p>Exciting benefits here</p>
-                  </div>
-                  <button className="offer-nav">
-                    <ChevronRight size={20} />
-                  </button>
-                </div>
-              </div>
-
+              <h2 style={{ color: "black", marginTop : "90px" }}>Booking Summary</h2>
               <div className="price-details">
+                <div className="price-row">
+                  <span>Base Rental Fee</span>
+                  <div className="price-action">
+                    <span className="price">₹{carData.price}/day</span>
+                  </div>
+                </div>
+
+                <div className="price-row">
+                  <span>Rental Duration</span>
+                  <div className="price-action">
+                    <span className="price">{formatRentalDuration()}</span>
+                  </div>
+                </div>
+
+                <div className="price-row">
+                  <span>
+                    Subtotal ({rentalInfo.totalDays} day
+                    {rentalInfo.totalDays > 1 ? "s" : ""})
+                  </span>
+                  <div className="price-action">
+                    <span className="price">₹{pricingInfo.basePrice}</span>
+                  </div>
+                </div>
+
                 <div className="price-row">
                   <span>Trip Protection Fee</span>
                   <div className="price-action">
                     <span className="change-link">Change</span>
-                    <span className="price">₹200</span>
+                    <span className="price">₹{pricingInfo.protectionFee}</span>
+                  </div>
+                </div>
+
+                <div className="price-row">
+                  <span>Service Fee</span>
+                  <div className="price-action">
+                    <span className="price">₹{pricingInfo.serviceFee}</span>
                   </div>
                 </div>
 
@@ -493,13 +622,11 @@ export default function CarBookingPage() {
                     <span className="tax-note">Inclusive of taxes</span>
                   </div>
                   <div className="price-amount">
-                    <span className="amount">₹1156</span>
+                    <span className="amount">₹{pricingInfo.total}</span>
                     <span className="view-details">View Details</span>
                   </div>
                 </div>
-                <Link to="/proceedToPay" className="profile-link">
-                  <button className="pay-button">PROCEED TO PAY</button>
-                </Link>
+                <button className="pay-button">PROCEED TO PAY</button>
               </div>
             </div>
           </div>
@@ -519,8 +646,8 @@ export default function CarBookingPage() {
               </button>
               <div className="modal-image-container">
                 <img
-                  src={carImages[selectedImage] || "/placeholder.svg"}
-                  alt={`Car view ${selectedImage}`}
+                  src={displayImages[selectedImage] || "/placeholder.svg"}
+                  alt={`${carData.displayName} view ${selectedImage}`}
                 />
               </div>
               <button className="next-image" onClick={nextImage}>

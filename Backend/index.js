@@ -13,7 +13,7 @@ const { auth } = require("./middleware/auth");
 
 app.use(
   cors({
-    origin: "http://localhost:5173", // Your React app URL
+    origin: ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173", "http://127.0.0.1:3000"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true, // If using cookies/auth
   })
@@ -52,10 +52,19 @@ const userRoutes = require("./routes/userRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const contactUsRoutes = require("./routes/contactUsRoutes");
 const HostRoutes = require("./routes/hostRoutes");
+const carRoutes = require("./routes/carRoutes");
+const AdminRoutes = require("./routes/adminRoutes");
+const CarTypeRoute = require("./routes/carTypeRoutes");
+
+
+
 app.use("/api/users", userRoutes);
 app.use("/api/payments", paymentRoutes);
-app.use("/api/contact-us", contactUsRoutes);
+app.use("/api/contact", contactUsRoutes);
 app.use("/api/host", HostRoutes);
+app.use("/api/cars", carRoutes);
+app.use("/api/admin", AdminRoutes);
+app.use("/api/carType", CarTypeRoute);
 app.get("/api/protected", auth, (req, res) => {
   res.json({ message: "This is a protected route", user: req.user });
 });

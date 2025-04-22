@@ -207,3 +207,10 @@
   color: #3e3027;
   font-size: 1.1rem;
 }
+select {
+  color: black;
+}
+
+input {
+  color: black;
+}

@@ -1,19 +1,41 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import SocialNetworkSection from "../components/HomePageComponents/SocialNetworkSection";
 import { Link } from "react-router-dom";
 
 const CarSharingLanding = () => {
-  const [brand, setBrand] = useState("");
-  const [model, setModel] = useState("");
   const [days, setDays] = useState(15);
+  const [carTypes, setCarTypes] = useState([]);
+  const [selectedCarType, setSelectedCarType] = useState(null);
+  const [selectedBrand, setSelectedBrand] = useState("");
+  const [selectedModel, setSelectedModel] = useState("");
 
-  const calculateEarnings = () => {
-    const min = days * 1000;
-    const max = days * 2000;
+  useEffect(() => {
+    const fetchCarTypes = async () => {
+      try {
+        const response = await fetch(
+          "http://localhost:5000/api/carType/car-types"
+        );
+        const data = await response.json();
+        setCarTypes(data);
+      } catch (error) {
+        console.error("Error fetching car types:", error);
+      }
+    };
+
+    fetchCarTypes();
+  }, []);
+
+  const calculateEarnings = (pricePerDay) => {
+    const min = days * pricePerDay;
+    const max = days * pricePerDay * 2;
     return { min, max };
   };
 
-  const earnings = calculateEarnings();
+  const earnings = selectedCarType
+    ? calculateEarnings(
+        carTypes.find((car) => car._id === selectedCarType)?.pricePerDay || 0
+      )
+    : { min: 0, max: 0 };
 
   return (
     <div style={{ fontFamily: "Arial, sans-serif" }}>
@@ -120,18 +142,38 @@ const CarSharingLanding = () => {
               color: "#41372d",
             }}
           >
-            <input
-              placeholder="Brand"
-              value={brand}
-              onChange={(e) => setBrand(e.target.value)}
+            <select
+              value={selectedBrand}
+              onChange={(e) => setSelectedBrand(e.target.value)}
               style={{ padding: "10px", width: "150px" }}
-            />
-            <input
-              placeholder="Model"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
+            >
+              <option value="">Select Brand</option>
+              {[...new Set(carTypes.map((carType) => carType.brand))].map(
+                (brand) => (
+                  <option key={brand} value={brand}>
+                    {brand}
+                  </option>
+                )
+              )}
+            </select>
+            <select
+              value={selectedModel}
+              onChange={(e) => {
+                setSelectedModel(e.target.value);
+                setSelectedCarType(e.target.value);
+              }}
               style={{ padding: "10px", width: "150px" }}
-            />
+              disabled={!selectedBrand}
+            >
+              <option value="">Select Model</option>
+              {carTypes
+                .filter((carType) => carType.brand === selectedBrand)
+                .map((carType) => (
+                  <option key={carType._id} value={carType._id}>
+                    {carType.name}
+                  </option>
+                ))}
+            </select>
             <div>
               <label htmlFor="days">Sharing Days</label>
               <input
@@ -177,9 +219,30 @@ const CarSharingLanding = () => {
             color: "#41372d",
           }}
         >
-          {[1, 2, 3].map((item) => (
+          {[
+            {
+              id: "priya-testimonial",
+              name: "Priya",
+              city: "Pune",
+              quote:
+                "I never thought sharing my car could be rewarding! Highly recommended.",
+            },
+            {
+              id: "amit-testimonial",
+              name: "Amit",
+              city: "Delhi",
+              quote:
+                "Zuvo made it super easy to earn from my car when I wasn't using it.",
+            },
+            {
+              id: "anita-testimonial",
+              name: "Anita",
+              city: "Mumbai",
+              quote: "Within a month, I started seeing real income coming in!",
+            },
+          ].map((testimonial) => (
             <div
-              key={item}
+              key={testimonial.id}
               style={{
                 backgroundColor: "#f0e6c8",
                 padding: "20px",
@@ -187,17 +250,15 @@ const CarSharingLanding = () => {
                 width: "280px",
               }}
             >
-              <p style={{ fontStyle: "italic" }}>
-                “I never thought sharing my car could be rewarding! Highly
-                recommended.”
-              </p>
+              <p style={{ fontStyle: "italic" }}>{`"${testimonial.quote}"`}</p>
               <p style={{ fontWeight: "bold", marginTop: "10px" }}>
-                – Priya, Pune
+                – {testimonial.name}, {testimonial.city}
               </p>
             </div>
           ))}
         </div>
       </div>
+
       <SocialNetworkSection />
     </div>
   );

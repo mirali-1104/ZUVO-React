@@ -24,6 +24,7 @@ import QueryPage from "./pages/QueryPage";
 import AdminQueries from "./Admin/AdminQueries";
 import Login from "./components/HostLoginSignUp/Login.jsx";
 import HostLoginSignup from "./pages/HostLoginSignUp.jsx";
+import AdminLogin from "./Admin/AdminLogin.jsx";
 
 function App() {
   return (
@@ -34,14 +35,14 @@ function App() {
           <Route path="/booking" element={<BookingSection />} />
           <Route path="/about" element={<AboutSection />} />
           <Route path="/vehicle-models" element={<VehicleModelsSection />} />
-          {/* <Route path="/contact" element={<ContactSection />} /> */}
-          <Route path="/login" element={<LoginSignup />} />{" "}
+          <Route path="/login" element={<LoginSignup />} />
           <Route path="/home-after-login" element={<HomeAfterLogin />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/car-buy" element={<CarBuy />} />
           <Route path="/becomeHost" element={<CarSharingLanding />} />
           <Route path="/proceedToPay" element={<PaymentPage />} />
-          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin-bookings" element={<Bookings />} />
           <Route path="/admin-units" element={<Units />} />
           <Route path="/admin-clients" element={<Clients />} />
@@ -52,7 +53,6 @@ function App() {
           <Route path="/support" element={<QueryPage />} />
           <Route path="/admin/queries" element={<AdminQueries />} />
           <Route path="/host-login" element={<HostLoginSignup />} />
-          
         </Routes>
       </Router>
     </AuthProvider>

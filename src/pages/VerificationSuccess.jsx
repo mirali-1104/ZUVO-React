@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Typography, Button, Container } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import axios from "axios";
 
 const VerificationSuccess = () => {
   const navigate = useNavigate();
@@ -14,6 +15,27 @@ const VerificationSuccess = () => {
 
     return () => clearTimeout(timer);
   }, [navigate]);
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    // You can now upload this file to your server
+  };
+
+  const handleFileUpload = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      await axios.post('/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      alert('File uploaded successfully');
+    } catch (error) {
+      console.error('Error uploading file:', error);
+    }
+  };
 
   return (
     <Container maxWidth="sm">
