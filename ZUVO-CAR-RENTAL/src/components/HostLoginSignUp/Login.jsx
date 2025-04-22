@@ -16,7 +16,7 @@ const api = axios.create({
   // Add retry logic
   validateStatus: function (status) {
     return status >= 200 && status < 500; // Only reject if server error
-  }
+  },
 });
 
 const HostLogin = ({ toggleForm }) => {
@@ -45,49 +45,54 @@ const HostLogin = ({ toggleForm }) => {
       if (response.data.success) {
         // Debug the host info we're getting from the server
         console.log("Host data from server:", response.data.host);
-        
+
         // Make sure the host object has the necessary fields
         const hostData = {
           id: response.data.host.id,
           name: response.data.host.name,
           email: response.data.host.email,
         };
-        
+
         console.log("Formatted host data for storage:", hostData);
         const token = response.data.token;
-        
+
         // Clear any existing data first
         localStorage.removeItem("host");
         localStorage.removeItem("hostData");
         localStorage.removeItem("authToken");
-        
+
         // Then set the new data
         localStorage.setItem("authToken", token);
         localStorage.setItem("hostData", JSON.stringify(hostData));
-        
+
         // Verify the token before redirecting
         try {
           // Need to format token with Bearer prefix for authentication to work
-          const authHeader = token.startsWith("Bearer ") ? token : `Bearer ${token}`;
+          const authHeader = token.startsWith("Bearer ")
+            ? token
+            : `Bearer ${token}`;
           console.log("Verifying token before redirect");
-          
+
           // Add a small delay to ensure token is properly stored
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          const verifyResponse = await axios.get("http://localhost:5000/api/host/debug-token", {
-            headers: {
-              Authorization: authHeader
+          await new Promise((resolve) => setTimeout(resolve, 500));
+
+          const verifyResponse = await axios.get(
+            "http://localhost:5000/api/host/debug-token",
+            {
+              headers: {
+                Authorization: authHeader,
+              },
             }
-          });
-          
+          );
+
           console.log("Token verification result:", verifyResponse.data);
-          
+
           if (verifyResponse.data.verified) {
             // Show success message
             toast.success("Login successful!", {
               position: "top-center",
             });
-            
+
             // Redirect to host dashboard
             navigate("/host-page");
           } else {
@@ -112,7 +117,10 @@ const HostLogin = ({ toggleForm }) => {
 
       // Handle different error cases
       if (error.response) {
-        if (error.response.status === 403 && error.response.data.isVerified === false) {
+        if (
+          error.response.status === 403 &&
+          error.response.data.isVerified === false
+        ) {
           toast.error(
             <div>
               Please verify your email before logging in
@@ -157,13 +165,19 @@ const HostLogin = ({ toggleForm }) => {
       } else if (error.request) {
         // The request was made but no response was received
         console.error("Network error details:", error.request);
-        toast.error("Cannot connect to server. Please check if the backend is running.", {
-          position: "top-center",
-        });
+        toast.error(
+          "Cannot connect to server. Please check if the backend is running.",
+          {
+            position: "top-center",
+          }
+        );
       } else {
-        toast.error(`Network error: ${error.message}. Please try again later.`, {
-          position: "top-center",
-        });
+        toast.error(
+          `Network error: ${error.message}. Please try again later.`,
+          {
+            position: "top-center",
+          }
+        );
       }
     } finally {
       setIsLoading(false);
@@ -217,16 +231,6 @@ const HostLogin = ({ toggleForm }) => {
           {isLoading ? "Logging in..." : "Sign In as Host"}
         </button>
       </form>
-
-      <div className="divider">
-        <span>Or</span>
-      </div>
-      <button className="google-button">
-        <FaGoogle /> Sign in with Google
-      </button>
-      <button className="facebook-button">
-        <FaFacebook /> Sign in with Facebook
-      </button>
       <p className="toggle-text">
         Don't have an account?{" "}
         <span className="toggle-link" onClick={toggleForm}>

@@ -464,3 +464,167 @@
   opacity: 0.7;
   cursor: not-allowed;
 }
+
+/* Bookings section styles */
+.bookings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.loading-message,
+.error-message,
+.no-bookings-message {
+  background-color: #f9f5ec;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  color: #5c3b1f;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.error-message {
+  background-color: #fff5f5;
+  color: #e03131;
+  border-left: 4px solid #e03131;
+}
+
+.booking-item {
+  display: flex;
+  background-color: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+}
+
+.booking-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(92, 59, 31, 0.15);
+}
+
+.booking-car-image {
+  width: 150px;
+  height: 120px;
+  object-fit: cover;
+}
+
+.booking-car-placeholder {
+  width: 150px;
+  height: 120px;
+  background-color: #f0e6d2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  color: #8c7b6b;
+}
+
+.booking-details {
+  flex: 1;
+  padding: 15px;
+}
+
+.booking-car-name {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+  color: #3d342a;
+}
+
+.booking-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  margin-bottom: 12px;
+}
+
+.booking-info p {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #5c3b1f;
+}
+
+.booking-status-payment {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.booking-status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.booking-status.confirmed {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.booking-status.pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.booking-status.cancelled {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.booking-status.completed {
+  background-color: #e6d5c1;
+  color: #3d342a;
+}
+
+.booking-amount {
+  font-size: 18px;
+  font-weight: 700;
+  color: #5c3b1f;
+}
+
+.booking-actions {
+  display: flex;
+  align-items: flex-end;
+  padding: 15px;
+}
+
+.cancel-booking-btn {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.cancel-booking-btn:hover {
+  background-color: #e6c0c5;
+}
+
+@media (max-width: 768px) {
+  .booking-item {
+    flex-direction: column;
+  }
+  
+  .booking-car-image,
+  .booking-car-placeholder {
+    width: 100%;
+    height: 180px;
+  }
+  
+  .booking-actions {
+    padding-top: 0;
+  }
+}

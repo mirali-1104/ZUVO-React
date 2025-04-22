@@ -10,6 +10,33 @@ const { auth } = require("../middleware/auth");
 const path = require("path");
 const upload = require("../middleware/upload");
 const fs = require("fs");
+const userController = require("../controllers/userController");
+
+// Define custom middleware functions
+const protect = auth;
+
+// Admin protection middleware
+const adminProtect = (req, res, next) => {
+  // Call the auth middleware first
+  auth(req, res, (err) => {
+    if (err) return next(err);
+    
+    // Check if the user is an admin
+    if (req.userType === 'admin' || (req.user && req.user.role === 'admin')) {
+      // If admin is found in req.admin, ensure it's also available as req.user
+      if (req.admin && !req.user) {
+        req.user = req.admin;
+      }
+      
+      return next();
+    }
+    
+    return res.status(403).json({
+      success: false,
+      error: "Admin access required"
+    });
+  });
+};
 
 // Route to register new user
 router.post("/register", async (req, res) => {
@@ -376,6 +403,9 @@ router.post("/profile/picture", auth, upload.single('file'), async (req, res) =>
     });
   }
 });
+
+// Add this route for getting user count (put it before any route with path parameters to avoid conflicts)
+router.get('/count', adminProtect, userController.getUserCount);
 
 router.get("/test", (req, res) => res.send("User routes working"));
 

@@ -1,25 +1,90 @@
-import React from "react";
-import { FiEdit2, FiTrash2 } from "react-icons/fi";
-import {Link} from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { FiEdit2, FiTrash2, FiEye } from "react-icons/fi";
+import { Link } from "react-router-dom";
+import axios from "axios";
+import { toast } from "react-toastify";
 
-const clients = [
-  {
-    id: 1,
-    name: "Miraliba Jadeja",
-    phone: "123-456-7890",
-    address: "Street ABC, Plot 23, City, State",
-    earned: "Rs. 2000"
-  },
-  // Repeat as needed...
-];
 const menuItems = [
-  { label: "Dashboard", icon: "📊", path: "/admin" },
+  { label: "Dashboard", icon: "📊", path: "/admin/dashboard" },
   { label: "Bookings", icon: "📑", path: "/admin-bookings" },
   { label: "Units", icon: "🚗", path: "/admin-units" },
   { label: "Clients", icon: "👥", path: "/admin-clients" },
   { label: "Payments", icon: "💳", path: "/admin-payments" },
 ];
+
 const Clients = () => {
+  const [hosts, setHosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchName, setSearchName] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [admin, setAdmin] = useState({});
+
+  // Fetch hosts on component mount
+  useEffect(() => {
+    fetchHosts();
+    // Get admin info from localStorage
+    const adminInfo = localStorage.getItem("admin");
+    if (adminInfo) {
+      setAdmin(JSON.parse(adminInfo));
+    }
+  }, [currentPage]);
+
+  const fetchHosts = async () => {
+    setLoading(true);
+    try {
+      // Get admin token from localStorage
+      const token = localStorage.getItem("adminToken");
+      if (!token) {
+        setError("You must be logged in as admin");
+        setLoading(false);
+        return;
+      }
+
+      // Build query parameters
+      let queryParams = `?page=${currentPage}`;
+      if (searchName) queryParams += `&name=${searchName}`;
+
+      // Make API request
+      const response = await axios.get(
+        `http://localhost:5000/api/host/admin/hosts${queryParams}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setHosts(response.data.hosts);
+        setTotalPages(response.data.pagination.totalPages);
+      } else {
+        setError("Failed to fetch hosts");
+      }
+    } catch (err) {
+      console.error("Error fetching hosts:", err);
+      setError(
+        err.response?.data?.error || "An error occurred while fetching hosts"
+      );
+      toast.error(err.response?.data?.error || "Failed to fetch hosts");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle search
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setCurrentPage(1); // Reset to first page when searching
+    fetchHosts();
+  };
+
+  // Format currency
+  const formatCurrency = (amount) => {
+    return `₹${amount.toLocaleString()}`;
+  };
+
   return (
     <div
       style={{
@@ -119,7 +184,7 @@ const Clients = () => {
             <h1
               style={{ fontSize: "20px", fontWeight: "bold", color: "black" }}
             >
-              CLIENTS
+              HOSTS
             </h1>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <Link to="/admin-profile">
@@ -129,8 +194,16 @@ const Clients = () => {
                     height: "40px",
                     borderRadius: "50%",
                     backgroundColor: "gray",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "white",
+                    fontSize: "18px",
+                    fontWeight: "bold",
                   }}
-                ></div>
+                >
+                  {admin.name ? admin.name.charAt(0).toUpperCase() : "A"}
+                </div>
               </Link>
               <div>
                 <p
@@ -141,7 +214,7 @@ const Clients = () => {
                     color: "black",
                   }}
                 >
-                  Admin Name
+                  {admin.name || "Admin Name"}
                 </p>
                 <p style={{ fontSize: "12px", margin: 0, color: "black" }}>
                   Admin
@@ -149,6 +222,21 @@ const Clients = () => {
               </div>
             </div>
           </div>
+
+          {/* Error message */}
+          {error && (
+            <div
+              style={{
+                padding: "10px",
+                backgroundColor: "#ffebee",
+                color: "#c62828",
+                borderRadius: "4px",
+                marginBottom: "10px",
+              }}
+            >
+              {error}
+            </div>
+          )}
 
           {/* Search and Add Button */}
           <div
@@ -158,101 +246,226 @@ const Clients = () => {
               alignItems: "center",
             }}
           >
-            <input
-              type="text"
-              placeholder="Search Name"
-              style={{
-                padding: "8px",
-                width: "250px",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                color: "white",
-              }}
-            />
-            <button
-              style={{
-                backgroundColor: "#5C4B3D",
-                color: "white",
-                padding: "8px 16px",
-                borderRadius: "4px",
-              }}
+            <form
+              onSubmit={handleSearch}
+              style={{ display: "flex", gap: "10px" }}
             >
-              Add Client
-            </button>
+              <input
+                type="text"
+                placeholder="Search Host Name"
+                style={{
+                  padding: "8px",
+                  width: "250px",
+                  borderRadius: "4px",
+                  border: "1px solid #ccc",
+                }}
+                value={searchName}
+                onChange={(e) => setSearchName(e.target.value)}
+              />
+              <button
+                type="submit"
+                style={{
+                  backgroundColor: "#5C4B3D",
+                  color: "white",
+                  padding: "8px 16px",
+                  borderRadius: "4px",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Search
+              </button>
+            </form>
           </div>
 
-          {/* Client Table */}
-          <div
-            style={{
-              backgroundColor: "#e4dbc2",
-              borderRadius: "8px",
-              padding: "12px",
-              overflowX: "auto",
-            }}
-          >
-            {/* Table Header */}
+          {/* Loading indicator */}
+          {loading && (
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 2fr 1fr 1fr 1fr",
-                fontWeight: "bold",
-                padding: "8px 0",
-                backgroundColor: "#9c8c74",
-                color: "#fff",
-                borderRadius: "6px",
+                textAlign: "center",
+                padding: "20px",
+                fontSize: "16px",
+                color: "#5C4B3D",
               }}
             >
-              <div style={{ paddingLeft: "8px" }}>Client</div>
-              <div>Phone</div>
-              <div>Address</div>
-              <div>Document</div>
-              <div>Earned</div>
-              <div>Action</div>
+              Loading hosts...
             </div>
+          )}
 
-            {/* Client Rows */}
-            {clients.map((client) => (
+          {/* Client Table */}
+          {!loading && hosts.length === 0 ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "30px",
+                fontSize: "16px",
+                color: "#5C4B3D",
+                backgroundColor: "white",
+                borderRadius: "8px",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              }}
+            >
+              No hosts found. Try adjusting your search criteria.
+            </div>
+          ) : (
+            <div
+              style={{
+                backgroundColor: "#e4dbc2",
+                borderRadius: "8px",
+                padding: "12px",
+                overflowX: "auto",
+              }}
+            >
+              {/* Table Header */}
               <div
-                key={client.id}
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr 2fr 1fr 1fr 1fr",
-                  alignItems: "center",
-                  padding: "12px 0",
-                  borderBottom: "1px solid #c2b79e",
-                  color: "black",
+                  fontWeight: "bold",
+                  padding: "8px 0",
+                  backgroundColor: "#9c8c74",
+                  color: "#fff",
+                  borderRadius: "6px",
                 }}
               >
-                <div style={{ paddingLeft: "8px" }}>{client.name}</div>
-                <div>{client.phone}</div>
-                <div>{client.address}</div>
-                <div>
-                  <button
-                    style={{
-                      padding: "6px 12px",
-                      backgroundColor: "#41372d",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    View
-                  </button>
-                </div>
-                <div style={{ fontWeight: "bold" }}>{client.earned}</div>
+                <div style={{ paddingLeft: "8px" }}>Host Name</div>
+               
+                <div>Phone</div>
+                <div>Verification</div>
+                <div>Earnings</div>
+                <div>Actions</div>
+              </div>
+
+              {/* Host Rows */}
+              {hosts.map((host) => (
                 <div
+                  key={host._id}
                   style={{
-                    display: "flex",
-                    gap: "10px",
-                    justifyContent: "center",
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 2fr 1fr 1fr 1fr",
+                    alignItems: "center",
+                    padding: "12px 0",
+                    borderBottom: "1px solid #c2b79e",
+                    color: "black",
                   }}
                 >
-                  <FiEdit2 style={{ cursor: "pointer" }} />
-                  <FiTrash2 style={{ cursor: "pointer" }} />
+                  <div style={{ paddingLeft: "8px" }}>{host.name}</div>
+                  
+                  <div>{host.mobile || "Not provided"}</div>
+                  <div>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "4px 8px",
+                        borderRadius: "4px",
+                        backgroundColor: host.isVerified
+                          ? "#4caf50"
+                          : "#f44336",
+                        color: "white",
+                        fontSize: "12px",
+                      }}
+                    >
+                      {host.isVerified ? "Verified" : "Not Verified"}
+                    </span>
+                  </div>
+                  <div style={{ fontWeight: "bold" }}>
+                    {formatCurrency(host.earnings || 0)}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "10px",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <button
+                      style={{
+                        background: "#5C4B3D",
+                        border: "none",
+                        borderRadius: "4px",
+                        padding: "6px",
+                        cursor: "pointer",
+                      }}
+                      title="View Host Details"
+                      onClick={() => {
+                        /* View host details functionality */
+                      }}
+                    >
+                      <FiEye color="white" size={18} />
+                    </button>
+                    <button
+                      style={{
+                        background: "#c62828",
+                        border: "none",
+                        borderRadius: "4px",
+                        padding: "6px",
+                        cursor: "pointer",
+                      }}
+                      title="Delete Host"
+                      onClick={() => {
+                        /* Delete host functionality */
+                      }}
+                    >
+                      <FiTrash2 color="white" size={18} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {!loading && totalPages > 1 && (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                marginTop: "20px",
+                gap: "10px",
+              }}
+            >
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: "6px 12px",
+                  backgroundColor: currentPage === 1 ? "#d5cfc2" : "#5C4B3D",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: currentPage === 1 ? "default" : "pointer",
+                }}
+              >
+                Previous
+              </button>
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  color: "#41372D",
+                }}
+              >
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: "6px 12px",
+                  backgroundColor:
+                    currentPage === totalPages ? "#d5cfc2" : "#5C4B3D",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: currentPage === totalPages ? "default" : "pointer",
+                }}
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

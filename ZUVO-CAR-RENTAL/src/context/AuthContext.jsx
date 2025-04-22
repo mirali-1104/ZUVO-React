@@ -9,7 +9,7 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null); // New error state
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("authToken");
     if (token) {
       fetchUserData(token);
     } else {
@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }) => {
   const fetchUserData = async (token) => {
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_API_URL}/api/users/profile`, // Using environment variable for API URL
+        `${import.meta.env.VITE_API_URL}/api/users/profile`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }) => {
       setUser(response.data);
     } catch (error) {
       console.error("Error fetching user data:", error);
-      localStorage.removeItem("token");
+      localStorage.removeItem("authToken");
       setUser(null);
       setError("Session expired or invalid token.");
     } finally {
@@ -39,14 +39,14 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/api/users/login`, // Using environment variable for API URL
+        `${import.meta.env.VITE_API_URL}/api/users/login`,
         {
           email,
           password,
         }
       );
       const { token, user } = response.data;
-      localStorage.setItem("token", token);
+      localStorage.setItem("authToken", token);
       setUser(user);
       setError(null); // Clear any previous errors
       return { success: true };
@@ -60,16 +60,16 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
+    localStorage.removeItem("authToken");
     setUser(null);
     setError(null); // Clear any errors on logout
   };
 
   const updateName = async (name) => {
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("authToken");
       const response = await axios.put(
-        `${process.env.REACT_APP_API_URL}/api/users/update-name`, // Using environment variable for API URL
+        `${import.meta.env.VITE_API_URL}/api/users/update-name`,
         { name },
         {
           headers: { Authorization: `Bearer ${token}` },

@@ -10,6 +10,33 @@ const { auth } = require("../middleware/auth");
 const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
+const hostController = require("../controllers/hostController");
+
+// Define custom middleware functions
+const protect = auth;
+
+// Admin protection middleware
+const adminProtect = (req, res, next) => {
+  // Call the auth middleware first
+  auth(req, res, (err) => {
+    if (err) return next(err);
+    
+    // Check if the user is an admin
+    if (req.userType === 'admin' || (req.user && req.user.role === 'admin')) {
+      // If admin is found in req.admin, ensure it's also available as req.user
+      if (req.admin && !req.user) {
+        req.user = req.admin;
+      }
+      
+      return next();
+    }
+    
+    return res.status(403).json({
+      success: false,
+      error: "Admin access required"
+    });
+  });
+};
 
 // Configure multer for profile picture upload
 const profileStorage = multer.diskStorage({
@@ -427,5 +454,11 @@ router.get("/debug-hosts", async (req, res) => {
     });
   }
 });
+
+// Add this route for getting host count (put it before any route with path parameters to avoid conflicts)
+router.get('/count', adminProtect, hostController.getHostCount);
+
+// Admin route to get all hosts with pagination and filtering
+router.get('/admin/hosts', adminProtect, hostController.getAllHostsForAdmin);
 
 module.exports = router;

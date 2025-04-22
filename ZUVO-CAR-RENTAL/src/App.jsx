@@ -12,13 +12,17 @@ import ProfilePage from "./pages/ProfilePage";
 import CarBuy from "./pages/CarBuy";
 import CarSharingLanding from "./pages/BecomeHost.jsx";
 import PaymentPage from "./pages/ProceedToPay.jsx";
+import PaymentProcess from "./pages/PaymentProcess.jsx";
+import BookingConfirmation from "./pages/BookingConfirmation.jsx";
 import AdminDashboard from "./Admin/AdminDashboard.jsx";
 import Bookings from "./Admin/Bookings.jsx";
 import Units from "./Admin/Units.jsx";
 import Clients from "./Admin/Clients.jsx";
 import Payment from "./Admin/Payment.jsx";
 import AdminProfilePage from "./Admin/AdminProfile.jsx";
+import EditCar from "./Admin/EditCar.jsx";
 import HostPage from "./pages/HostPage.jsx";
+import HostProfile from "./pages/HostProfile.jsx";
 import AddCarForm from "./pages/AddCarForm.jsx";
 import QueryPage from "./pages/QueryPage";
 import AdminQueries from "./Admin/AdminQueries";
@@ -41,14 +45,18 @@ function App() {
           <Route path="/car-buy" element={<CarBuy />} />
           <Route path="/becomeHost" element={<CarSharingLanding />} />
           <Route path="/proceedToPay" element={<PaymentPage />} />
+          <Route path="/payment-process" element={<PaymentProcess />} />
+          <Route path="/booking-confirmation" element={<BookingConfirmation />} />
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin-bookings" element={<Bookings />} />
           <Route path="/admin-units" element={<Units />} />
+          <Route path="/admin-edit-car/:carId" element={<EditCar />} />
           <Route path="/admin-clients" element={<Clients />} />
           <Route path="/admin-payments" element={<Payment />} />
           <Route path="/admin-profile" element={<AdminProfilePage />} />
           <Route path="/host-page" element={<HostPage />} />
+          <Route path="/host-profile" element={<HostProfile />} />
           <Route path="/add-car" element={<AddCarForm />} />
           <Route path="/support" element={<QueryPage />} />
           <Route path="/admin/queries" element={<AdminQueries />} />

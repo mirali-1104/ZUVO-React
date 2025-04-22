@@ -14,6 +14,7 @@ import {
   CartesianGrid,
   YAxis,
   Legend,
+  ResponsiveContainer,
 } from "recharts";
 
 const AdminDashboard = () => {
@@ -27,8 +28,24 @@ const AdminDashboard = () => {
     pricePerDay: "",
   });
   const [file, setFile] = useState(null);
+  const [bookingStats, setBookingStats] = useState([]);
+  const [loadingBookings, setLoadingBookings] = useState(true);
+  const [monthlyTrends, setMonthlyTrends] = useState([]);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalRevenue: 0,
+    totalCars: 0,
+    totalHosts: 0,
+    totalUsers: 0,
+    loading: true
+  });
+  const [adminProfile, setAdminProfile] = useState({
+    name: "Admin",
+    email: "",
+    loading: true
+  });
 
-  const bookingData = [
+  // Default data in case API fails
+  const defaultBookingData = [
     { name: "Jan", value: 800 },
     { name: "Feb", value: 650 },
     { name: "Mar", value: 700 },
@@ -43,13 +60,15 @@ const AdminDashboard = () => {
     { name: "Dec", value: 680 },
   ];
 
-  const pieData = [
-    { name: "Hired", value: 52 },
-    { name: "Pending", value: 27 },
+  // Default pie data in case API fails
+  const defaultPieData = [
+    { name: "Confirmed", value: 52 },
     { name: "Cancelled", value: 21 },
+    { name: "Pending", value: 15 },
+    { name: "Completed", value: 32 },
   ];
 
-  const COLORS = ["#58A06E", "#D3A048", "#DA524E"];
+  const COLORS = ["#58A06E", "#DA524E", "#F0A93B", "#3B82F6"];
 
   const menuItems = [
     { label: "Dashboard", icon: "📊", path: "/admin/dashboard" },
@@ -60,12 +79,264 @@ const AdminDashboard = () => {
   ];
 
   const fetchData = async () => {
-    const res = await axios.get("http://localhost:5000/api/carType/car-types");
-    setCarTypes(res.data);
+    try {
+      const res = await axios.get(
+        "http://localhost:5000/api/carType/car-types"
+      );
+      setCarTypes(res.data);
+    } catch (error) {
+      console.error("Error fetching car types:", error);
+    }
+  };
+
+  const fetchDashboardStats = async () => {
+    try {
+      setDashboardStats(prev => ({ ...prev, loading: true }));
+      const token = localStorage.getItem("adminToken") || localStorage.getItem("token");
+      
+      if (!token) {
+        console.log("No token found for fetchDashboardStats");
+        setDashboardStats({
+          totalRevenue: 0, 
+          totalCars: 0,
+          totalHosts: 0,
+          totalUsers: 0,
+          loading: false
+        });
+        return;
+      }
+      
+      // Fetch total revenue from bookings
+      const revenueResponse = await axios.get(
+        `http://localhost:5000/api/bookings/revenue`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      // Fetch total cars count
+      const carsResponse = await axios.get(
+        `http://localhost:5000/api/cars/count`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      // Fetch total hosts count
+      const hostsResponse = await axios.get(
+        `http://localhost:5000/api/host/count`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      // Fetch total users count
+      const usersResponse = await axios.get(
+        `http://localhost:5000/api/users/count`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      setDashboardStats({
+        totalRevenue: revenueResponse.data?.totalRevenue || 0,
+        totalCars: carsResponse.data?.count || 0,
+        totalHosts: hostsResponse.data?.count || 0,
+        totalUsers: usersResponse.data?.count || 0,
+        loading: false
+      });
+      
+      console.log("Revenue data fetched:", revenueResponse.data);
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+      // Set default values in case of error
+      setDashboardStats({
+        totalRevenue: 0, 
+        totalCars: 0,
+        totalHosts: 0,
+        totalUsers: 0,
+        loading: false
+      });
+    }
+  };
+
+  const fetchBookingStats = async () => {
+    setLoadingBookings(true);
+    try {
+      const token = localStorage.getItem("adminToken") || localStorage.getItem("token");
+      
+      if (!token) {
+        console.log("No token found for fetchBookingStats");
+        setBookingStats(defaultPieData);
+        setMonthlyTrends(defaultBookingData);
+        setLoadingBookings(false);
+        return;
+      }
+      
+      const response = await axios.get(
+        `http://localhost:5000/api/bookings/stats`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data && response.data.success) {
+        const { confirmed, cancelled, pending, completed, monthlyTrends: trends } = response.data;
+
+        // Set booking status data for pie chart using all possible statuses
+        const bookingStatusData = [
+          { name: "Confirmed", value: confirmed || 0 },
+          { name: "Cancelled", value: cancelled || 0 },
+          { name: "Pending", value: pending || 0 },
+          { name: "Completed", value: completed || 0 }
+        ].filter(item => item.value > 0); // Only include statuses with values > 0
+
+        setBookingStats(bookingStatusData.length > 0 ? bookingStatusData : defaultPieData);
+
+        // Set monthly trends data for bar chart and line chart
+        if (trends && trends.length > 0) {
+          setMonthlyTrends(trends);
+        } else {
+          setMonthlyTrends(defaultBookingData);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching booking stats:", error);
+      // Use default data if API call fails
+      setBookingStats(defaultPieData);
+      setMonthlyTrends(defaultBookingData);
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
+
+  // Function to fetch admin profile
+  const fetchAdminProfile = async () => {
+    try {
+      const token = localStorage.getItem("adminToken") || localStorage.getItem("token");
+      if (!token) {
+        console.log("No admin token found");
+        setAdminProfile({
+          name: "Admin",
+          email: "",
+          loading: false
+        });
+        return;
+      }
+
+      console.log("Using token:", token.substring(0, 15) + "...");
+
+      // First, try the correct endpoint based on the adminRoutes.js file
+      try {
+        const response = await axios.get(
+          "http://localhost:5000/api/admin/profile",
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        );
+        
+        console.log("Admin profile response:", response.data);
+        
+        if (response.data) {
+          // The API returns the admin object directly
+          setAdminProfile({
+            name: response.data.name || "Admin",
+            email: response.data.email || "",
+            loading: false
+          });
+          console.log("Admin profile set from direct response");
+          return;
+        }
+      } catch (err) {
+        console.log("Error with primary admin profile endpoint:", err.message);
+      }
+      
+      // If first attempt fails, try alternative endpoints
+      const endpoints = [
+        "http://localhost:5000/api/admins/profile",
+        "http://localhost:5000/api/admin/me"
+      ];
+
+      for (const endpoint of endpoints) {
+        try {
+          console.log(`Trying alternative endpoint: ${endpoint}`);
+          const response = await axios.get(endpoint, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          if (response.data) {
+            // Check different possible response formats
+            const profileData = response.data.admin || response.data.user || response.data;
+            
+            setAdminProfile({
+              name: profileData.name || "Admin",
+              email: profileData.email || "",
+              loading: false
+            });
+            console.log("Admin profile set from alternative endpoint");
+            return;
+          }
+        } catch (err) {
+          console.log(`Error with endpoint ${endpoint}:`, err.message);
+        }
+      }
+
+      // If we reach here, none of the endpoints worked
+      console.log("Could not fetch admin profile from any endpoint");
+      
+      // Try to decode the token to at least get the email
+      try {
+        const tokenParts = token.split('.');
+        if (tokenParts.length === 3) {
+          const payload = JSON.parse(atob(tokenParts[1]));
+          console.log("Token payload:", payload);
+          
+          if (payload.email) {
+            setAdminProfile({
+              name: payload.name || "Admin",
+              email: payload.email,
+              loading: false
+            });
+            console.log("Admin email set from token payload");
+            return;
+          }
+        }
+      } catch (e) {
+        console.log("Error decoding token:", e);
+      }
+      
+      // Final fallback
+      setAdminProfile({
+        name: "Admin",
+        email: "",
+        loading: false
+      });
+      
+    } catch (error) {
+      console.error("Error in admin profile fetch:", error);
+      setAdminProfile({
+        name: "Admin",
+        email: "",
+        loading: false
+      });
+    }
   };
 
   useEffect(() => {
     fetchData();
+    fetchBookingStats();
+    fetchDashboardStats();
+    fetchAdminProfile();
   }, []);
 
   const handleChange = (e) => {
@@ -92,11 +363,15 @@ const AdminDashboard = () => {
     }
 
     try {
-      const res = await axios.post("http://localhost:5000/api/carType/add", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const res = await axios.post(
+        "http://localhost:5000/api/carType/add",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
       setShowForm(false);
       setForm({
         brand: "",
@@ -112,6 +387,53 @@ const AdminDashboard = () => {
       // Handle error
     }
   };
+
+  const getTotalBookings = () => {
+    if (!bookingStats.length) return 0;
+    return bookingStats.reduce((total, item) => total + item.value, 0);
+  };
+
+  const getPercentage = (value) => {
+    const total = getTotalBookings();
+    if (total === 0) return 0;
+    return Math.round((value / total) * 100);
+  };
+
+  // Format currency for display
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const statCards = [
+    {
+      title: "Total Revenue",
+      value: formatCurrency(dashboardStats.totalRevenue),
+      icon: "💰",
+      color: "#58A06E"
+    },
+    {
+      title: "Total Cars",
+      value: dashboardStats.totalCars,
+      icon: "🚗",
+      color: "#5B8AF0"
+    },
+    {
+      title: "Total Hosts",
+      value: dashboardStats.totalHosts,
+      icon: "🏠",
+      color: "#D3A048"
+    },
+    {
+      title: "Total Users",
+      value: dashboardStats.totalUsers,
+      icon: "👥",
+      color: "#A06ECB"
+    }
+  ];
 
   return (
     <div
@@ -212,29 +534,78 @@ const AdminDashboard = () => {
               ></div>
             </Link>
             <div>
-              <p style={{ fontSize: "14px", fontWeight: "bold" }}>Admin Name</p>
-              <p style={{ fontSize: "12px" }}>Admin</p>
+              <p style={{ fontSize: "14px", fontWeight: "bold" }}>
+                {adminProfile.loading ? "Loading..." : adminProfile.name}
+              </p>
+              <p style={{ fontSize: "12px" }}>
+                {adminProfile.email || "Admin"}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Revenue Cards */}
+        {/* Stats Cards */}
         <div style={{ display: "flex", gap: "16px", flex: "none" }}>
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              style={{
+          {dashboardStats.loading ? (
+            <div 
+              style={{ 
                 background: "linear-gradient(to bottom, #e3ddcf, #d0c8ba)",
                 padding: "16px",
                 flex: 1,
                 color: "#41372D",
                 borderRadius: "10px",
+                textAlign: "center"
               }}
             >
-              <h3 style={{ fontSize: "14px" }}>Total Revenue</h3>
-              <p style={{ fontSize: "18px", fontWeight: "bold" }}>₹ 2,60,829</p>
+              Loading dashboard statistics...
             </div>
-          ))}
+          ) : (
+            statCards.map((card, i) => (
+              <div
+                key={i}
+                style={{
+                  background: "linear-gradient(to bottom, #e3ddcf, #d0c8ba)",
+                  padding: "16px",
+                  flex: 1,
+                  color: "#41372D",
+                  borderRadius: "10px",
+                  boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                  position: "relative",
+                  overflow: "hidden"
+                }}
+              >
+                <div 
+                  style={{ 
+                    position: "absolute", 
+                    top: 0, 
+                    left: 0, 
+                    height: "5px", 
+                    width: "100%", 
+                    background: card.color 
+                  }}
+                />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <h3 style={{ fontSize: "14px", opacity: 0.8 }}>{card.title}</h3>
+                    <p style={{ fontSize: "24px", fontWeight: "bold", marginTop: "8px" }}>{card.value}</p>
+                  </div>
+                  <div style={{ 
+                    fontSize: "28px", 
+                    opacity: 0.8, 
+                    backgroundColor: `${card.color}20`,
+                    width: "48px",
+                    height: "48px",
+                    borderRadius: "12px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}>
+                    {card.icon}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Charts */}
@@ -249,26 +620,45 @@ const AdminDashboard = () => {
             }}
           >
             <h3>Booking Overview</h3>
-            <BarChart width={600} height={200} data={bookingData}>
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="value" fill="#332f2b" />
-            </BarChart>
-            <h3 style={{ marginTop: "20px" }}>Booking Trends</h3>
-            <LineChart width={600} height={200} data={bookingData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke="#8884d8"
-                activeDot={{ r: 8 }}
-              />
-            </LineChart>
+            {loadingBookings ? (
+              <div style={{ textAlign: "center", padding: "20px" }}>
+                Loading booking data...
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={monthlyTrends}>
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip
+                      formatter={(value) => [`${value} bookings`, "Count"]}
+                      labelFormatter={(name) => `Month: ${name}`}
+                    />
+                    <Bar dataKey="value" name="Bookings" fill="#332f2b" />
+                  </BarChart>
+                </ResponsiveContainer>
+                <h3 style={{ marginTop: "20px" }}>Booking Trends</h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={monthlyTrends}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip
+                      formatter={(value) => [`${value} bookings`, "Count"]}
+                      labelFormatter={(name) => `Month: ${name}`}
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="value"
+                      name="Bookings"
+                      stroke="#8884d8"
+                      activeDot={{ r: 8 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </>
+            )}
           </div>
           <div
             style={{
@@ -285,39 +675,66 @@ const AdminDashboard = () => {
                 borderRadius: "10px",
               }}
             >
-              Rent Status
+              Booking Status
             </h3>
-            <PieChart
-              width={300}
-              height={300}
-              style={{
-                justifyContent: "center",
-              }}
-            >
-              <Pie
-                data={pieData}
-                cx="50%"
-                cy="50%"
-                innerRadius={40}
-                outerRadius={60}
-                paddingAngle={5}
-                dataKey="value"
-              >
-                {pieData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={COLORS[index % COLORS.length]}
-                  />
-                ))}
-              </Pie>
-            </PieChart>
-            <ul
-              style={{ fontSize: "14px", marginTop: "10px", color: "#41372D" }}
-            >
-              <li>🟢 Hired - 52%</li>
-              <li>🟡 Pending - 27%</li>
-              <li>🔴 Cancelled - 21%</li>
-            </ul>
+            {loadingBookings ? (
+              <div style={{ textAlign: "center", padding: "20px" }}>
+                Loading...
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={bookingStats}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={40}
+                      outerRadius={60}
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={({ name, percent }) =>
+                        `${name} ${(percent * 100).toFixed(0)}%`
+                      }
+                    >
+                      {bookingStats.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value) => [`${value} bookings`, "Count"]}
+                      labelFormatter={(name) => `Status: ${name}`}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <ul
+                  style={{
+                    fontSize: "14px",
+                    marginTop: "10px",
+                    color: "#41372D",
+                    listStyleType: "none",
+                  }}
+                >
+                  {bookingStats.map((stat, index) => (
+                    <li key={index}>
+                      <span style={{ 
+                        display: 'inline-block', 
+                        width: '12px', 
+                        height: '12px', 
+                        borderRadius: '50%', 
+                        backgroundColor: COLORS[index % COLORS.length],
+                        marginRight: '5px'
+                      }}></span> 
+                      {stat.name} - {getPercentage(stat.value)}%
+                      ({stat.value})
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
         </div>
 
@@ -513,7 +930,15 @@ const AdminDashboard = () => {
                   width: "400px",
                 }}
               >
-                <h4 style={{ marginBottom: "20px", textAlign: "center", color: "#41372D" }}>Add New Car Type</h4>
+                <h4
+                  style={{
+                    marginBottom: "20px",
+                    textAlign: "center",
+                    color: "#41372D",
+                  }}
+                >
+                  Add New Car Type
+                </h4>
                 <form onSubmit={handleSubmit}>
                   <input
                     name="brand"
@@ -591,7 +1016,9 @@ const AdminDashboard = () => {
                       marginBottom: "20px",
                     }}
                   />
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <div
+                    style={{ display: "flex", justifyContent: "space-between" }}
+                  >
                     <button
                       type="submit"
                       style={{
@@ -603,8 +1030,12 @@ const AdminDashboard = () => {
                         cursor: "pointer",
                         transition: "background 0.3s",
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#4a8a5c")}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#58A06E")}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.backgroundColor = "#4a8a5c")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.backgroundColor = "#58A06E")
+                      }
                     >
                       Submit
                     </button>
@@ -620,8 +1051,12 @@ const AdminDashboard = () => {
                         cursor: "pointer",
                         transition: "background 0.3s",
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#c44a44")}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#DA524E")}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.backgroundColor = "#c44a44")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.backgroundColor = "#DA524E")
+                      }
                     >
                       Cancel
                     </button>

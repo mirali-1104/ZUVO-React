@@ -66,10 +66,13 @@ const HostSignUp = ({ toggleForm }) => {
         });
 
         // Show success toast
-        toast.success("✅ Registration successful! Please check your email for verification.", {
-          position: "top-center",
-          autoClose: 5000,
-        });
+        toast.success(
+          "✅ Registration successful! Please check your email for verification.",
+          {
+            position: "top-center",
+            autoClose: 5000,
+          }
+        );
 
         // Optionally toggle to login form after successful registration
         setTimeout(() => {
@@ -77,7 +80,8 @@ const HostSignUp = ({ toggleForm }) => {
         }, 2000);
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.error || "Registration failed. Please try again.";
+      const errorMessage =
+        err.response?.data?.error || "Registration failed. Please try again.";
       setError(errorMessage);
       toast.error(errorMessage, {
         position: "top-center",
@@ -157,16 +161,6 @@ const HostSignUp = ({ toggleForm }) => {
 
       {error && <p className="error-text">{error}</p>}
       {success && <p className="success-text">{success}</p>}
-
-      <div className="divider">
-        <span>Or</span>
-      </div>
-      <button className="google-button">
-        <FaGoogle /> Sign up with Google
-      </button>
-      <button className="facebook-button">
-        <FaFacebook /> Sign up with Facebook
-      </button>
       <p className="toggle-text">
         Already have an account?{" "}
         <span className="toggle-link" onClick={toggleForm}>

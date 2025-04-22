@@ -55,8 +55,7 @@ const HostRoutes = require("./routes/hostRoutes");
 const carRoutes = require("./routes/carRoutes");
 const AdminRoutes = require("./routes/adminRoutes");
 const CarTypeRoute = require("./routes/carTypeRoutes");
-
-
+const bookingRoutes = require("./routes/bookingRoutes");
 
 app.use("/api/users", userRoutes);
 app.use("/api/payments", paymentRoutes);
@@ -65,6 +64,7 @@ app.use("/api/host", HostRoutes);
 app.use("/api/cars", carRoutes);
 app.use("/api/admin", AdminRoutes);
 app.use("/api/carType", CarTypeRoute);
+app.use("/api/bookings", bookingRoutes);
 app.get("/api/protected", auth, (req, res) => {
   res.json({ message: "This is a protected route", user: req.user });
 });

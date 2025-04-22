@@ -111,3 +111,30 @@ exports.verifyEmail = async (req, res) => {
     res.status(500).json({ error: "Server error during verification" });
   }
 };
+
+// Get total count of users
+exports.getUserCount = async (req, res) => {
+  try {
+    // Check if admin - more robust check using both req.userType and req.user.role if available
+    if (req.userType !== 'admin' && !(req.user && req.user.role === 'admin')) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to access user count data'
+      });
+    }
+    
+    // Count all users since there's no role field in the User model
+    const count = await User.countDocuments();
+    
+    return res.status(200).json({
+      success: true,
+      count
+    });
+  } catch (error) {
+    console.error('Error getting user count:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to get user count'
+    });
+  }
+};

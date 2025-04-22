@@ -1,8 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { FaUserCircle, FaCarSide } from "react-icons/fa";
-import { FaRocket } from "react-icons/fa";
+import React, { useState, useEffect, useRef } from "react";
+import { FaUserCircle, FaCarSide, FaEdit, FaRocket, FaCog, FaLock, FaUsers } from "react-icons/fa";
 import { MdAccessTime } from "react-icons/md";
-import { FaCog, FaLock, FaUsers } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import SocialNetworkSection from "../components/HomePageComponents/SocialNetworkSection";
 import axios from "axios";
@@ -275,6 +273,8 @@ const HostPage = () => {
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const dropdownRef = useRef(null);
 
   // Set up axios interceptors for debugging
   useEffect(() => {
@@ -630,6 +630,34 @@ const HostPage = () => {
     }
   };
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowProfileDropdown(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Handle profile navigation
+  const handleEditProfile = () => {
+    navigate("/host-profile");
+    setShowProfileDropdown(false);
+  };
+
+  const handleLogout = () => {
+    // Clear local storage
+    localStorage.removeItem("hostData");
+    localStorage.removeItem("authToken");
+    // Redirect to login
+    navigate("/host-login");
+  };
+
   return (
     <div style={{ backgroundColor: "#d8d0b2", minHeight: "100vh" }}>
       {/* Navbar */}
@@ -660,13 +688,69 @@ const HostPage = () => {
             </Link>
           </nav>
         </div>
-        <Link to="/host-profile">
+        <div style={{ position: "relative" }} ref={dropdownRef}>
           <FaUserCircle
             size={40}
             color="#3d342a"
             style={{ cursor: "pointer" }}
+            onClick={() => setShowProfileDropdown(!showProfileDropdown)}
           />
-        </Link>
+          
+          {showProfileDropdown && (
+            <div 
+              style={{
+                position: "absolute",
+                top: "45px",
+                right: "0",
+                backgroundColor: "#f5f0e1",
+                borderRadius: "8px",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                padding: "10px 0",
+                zIndex: 100,
+                minWidth: "180px",
+              }}
+            >
+              <div style={{ padding: "8px 16px", borderBottom: "1px solid #e0d6b8" }}>
+                <p style={{ margin: "0", fontWeight: "bold" }}>{hostName || "Host"}</p>
+              </div>
+              
+              <div 
+                style={{ 
+                  padding: "10px 16px", 
+                  display: "flex", 
+                  alignItems: "center", 
+                  gap: "10px",
+                  cursor: "pointer",
+                  transition: "background-color 0.2s",
+                  hover: { backgroundColor: "#e0d6b8" }
+                }}
+                onClick={handleEditProfile}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#e0d6b8"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+              >
+                <FaEdit size={16} />
+                <span>Edit Profile</span>
+              </div>
+              
+              <div 
+                style={{ 
+                  padding: "10px 16px", 
+                  display: "flex", 
+                  alignItems: "center", 
+                  gap: "10px",
+                  cursor: "pointer",
+                  color: "#e03131",
+                  transition: "background-color 0.2s"
+                }}
+                onClick={handleLogout}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#e0d6b8"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+              >
+                <span>Logout</span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Content without margin-left */}

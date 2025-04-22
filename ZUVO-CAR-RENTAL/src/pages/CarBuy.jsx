@@ -19,6 +19,8 @@ export default function CarBookingPage() {
     hours: 5,
     totalDays: 1,
   });
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [userId, setUserId] = useState(null);
 
   // Default images as fallback
   const defaultCarImages = [
@@ -185,6 +187,48 @@ export default function CarBookingPage() {
     fetchCarDetails();
   }, [location]);
 
+  // Check for user authentication
+  useEffect(() => {
+    // Check if user is logged in
+    const checkAuth = () => {
+      const token = localStorage.getItem('authToken');
+      const userData = localStorage.getItem('userData');
+      
+      if (token && userData) {
+        try {
+          const user = JSON.parse(userData);
+          setUserId(user._id || user.id);
+          return true;
+        } catch (err) {
+          console.error('Error parsing user data:', err);
+          return false;
+        }
+      }
+      return false;
+    };
+    
+    const isLoggedIn = checkAuth();
+    
+    // Only redirect if not logged in AND viewing the actual booking page (not in the middle of a payment flow)
+    if (!isLoggedIn && !location.pathname.includes('payment-process')) {
+      console.log('User not logged in, need to redirect to login');
+      // Check if there's a current booking attempt
+      const existingBookingAttempt = sessionStorage.getItem('bookingState');
+      
+      // Only save current state if we don't already have one saved
+      if (!existingBookingAttempt && location.state) {
+        sessionStorage.setItem('bookingState', JSON.stringify(location.state));
+        console.log('Saved booking state to session storage');
+      }
+      
+      // Redirect to login
+      alert('Please login to continue with booking');
+      navigate('/login', { state: { returnTo: '/car-buy' } });
+    } else {
+      console.log('User is logged in or in payment flow, no redirect needed');
+    }
+  }, [navigate, location.state, location.pathname]);
+
   const reviews = [
     {
       id: 1,
@@ -275,6 +319,79 @@ export default function CarBookingPage() {
       return `${days} day${
         days > 1 ? "s" : ""
       } and ${hours} hours (charged as ${days + 1} days)`;
+    }
+  };
+
+  // Handle terms and conditions acceptance
+  const handleTermsAcceptance = (e) => {
+    setTermsAccepted(e.target.checked);
+  };
+
+  // Handle payment process
+  const handlePaymentProcess = async () => {
+    if (!termsAccepted) {
+      alert('Please accept the terms and conditions to proceed');
+      return;
+    }
+
+    if (!carData || !userId) {
+      alert('Missing essential booking information');
+      return;
+    }
+
+    // Calculate today as start date if not specified
+    const today = new Date();
+    
+    // Calculate end date based on totalDays
+    const endDate = new Date(today);
+    endDate.setDate(today.getDate() + rentalInfo.totalDays);
+
+    // Use the dates passed from the vehicle selection instead of generating new ones
+    let startDateToUse = today;
+    let endDateToUse = endDate;
+    
+    // If rentalInfo contains actual dates, use those instead
+    if (rentalInfo && rentalInfo.startDate) {
+      startDateToUse = new Date(rentalInfo.startDate);
+    }
+    
+    if (rentalInfo && rentalInfo.endDate) {
+      endDateToUse = new Date(rentalInfo.endDate);
+    }
+
+    // Format dates for the API
+    const formatDate = (date) => {
+      return date.toISOString();
+    };
+
+    // Prepare booking data with all required fields
+    const bookingData = {
+      carId: carData.id || carData._id,
+      userId: userId,
+      startDate: formatDate(startDateToUse),
+      endDate: formatDate(endDateToUse),
+      totalDays: rentalInfo.totalDays,
+      totalAmount: pricingInfo.total,
+      carName: carData.displayName,
+      hostId: carData.hostId || carData.host?._id,
+      pickupLocation: 'Main Branch',
+      // Add any additional information that might be needed
+      carDetails: {
+        model: carData.displayName,
+        transmission: carData.transmission,
+        fuel: carData.fuel,
+        seats: carData.seats
+      }
+    };
+
+    console.log('Prepared booking data:', bookingData);
+    
+    try {
+      // Navigate to payment processing page with booking details
+      navigate('/payment-process', { state: { bookingData } });
+    } catch (error) {
+      console.error('Error initializing payment:', error);
+      alert('Failed to process payment. Please try again.');
     }
   };
 
@@ -493,7 +610,7 @@ export default function CarBookingPage() {
                 style={{
                   backgroundColor: "#e3d6b8",
                   border: "1px solid #c0b68f",
-                  padding: "10px",
+                  padding: "10px",            
                   marginTop: "20px",
                   borderRadius: "6px",
                   color: "#41372D",
@@ -554,10 +671,17 @@ export default function CarBookingPage() {
                   fontSize: "14px",
                 }}
               >
-                <label>
-                  <input type="checkbox" style={{ marginRight: "10px" }} />I
-                  acknowledge and accept the terms and conditions of the Lease
-                  Agreement with the Host.
+                <label style={{ display: "flex", alignItems: "flex-start", cursor: "pointer" }}>
+                  <input 
+                    type="checkbox" 
+                    style={{ marginRight: "10px", marginTop: "3px" }} 
+                    checked={termsAccepted}
+                    onChange={handleTermsAcceptance}
+                  />
+                  <span>
+                    I acknowledge and accept the terms and conditions of the Lease
+                    Agreement with the Host.
+                  </span>
                 </label>
                 <div
                   style={{
@@ -575,7 +699,7 @@ export default function CarBookingPage() {
 
           <div className="car-booking-right">
             <div className="payment-container">
-              <h2 style={{ color: "black", marginTop : "90px" }}>Booking Summary</h2>
+              <h2 style={{ color: "black", marginTop: "90px" }}>Booking Summary</h2>
               <div className="price-details">
                 <div className="price-row">
                   <span>Base Rental Fee</span>
@@ -626,7 +750,17 @@ export default function CarBookingPage() {
                     <span className="view-details">View Details</span>
                   </div>
                 </div>
-                <button className="pay-button">PROCEED TO PAY</button>
+                <button 
+                  className="pay-button" 
+                  onClick={handlePaymentProcess}
+                  disabled={!termsAccepted}
+                  style={{
+                    opacity: termsAccepted ? 1 : 0.6,
+                    cursor: termsAccepted ? 'pointer' : 'not-allowed'
+                  }}
+                >
+                  PROCEED TO PAY
+                </button>
               </div>
             </div>
           </div>

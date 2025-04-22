@@ -1,9 +1,18 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import axios from "axios";
 import "../styles/ProfilePage.css";
-import { Edit, Check, User, Upload } from "lucide-react";
+import {
+  Edit,
+  Check,
+  User,
+  Upload,
+  Calendar,
+  MapPin,
+  Clock,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 const ProfilePage = () => {
@@ -19,9 +28,14 @@ const ProfilePage = () => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [userBookings, setUserBookings] = useState([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [bookingsError, setBookingsError] = useState(null);
+  const [cancellingBookingId, setCancellingBookingId] = useState(null);
 
   useEffect(() => {
     fetchUserData();
+    fetchUserBookings();
   }, []);
   useEffect(() => {
     if (error) {
@@ -80,11 +94,46 @@ const ProfilePage = () => {
     }
   };
 
+  const fetchUserBookings = async () => {
+    try {
+      setBookingsLoading(true);
+      setBookingsError(null);
+
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        throw new Error("No authentication token found. Please login again.");
+      }
+
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/bookings/user`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data && response.data.success) {
+        setUserBookings(response.data.bookings);
+      } else {
+        throw new Error("Failed to fetch bookings");
+      }
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+      let errorMessage = "Failed to fetch bookings";
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      setBookingsError(errorMessage);
+    } finally {
+      setBookingsLoading(false);
+    }
+  };
+
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletStatus, setWalletStatus] = useState(null);
   const [walletId, setWalletId] = useState(null);
-
-  // ... (keep all your existing useEffect and other functions)
 
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
@@ -137,9 +186,9 @@ const ProfilePage = () => {
             const verification = await axios.post(
               `${import.meta.env.VITE_API_URL}/api/payments/verify`,
               {
-                order_id: response.razorpay_order_id,
-                payment_id: response.razorpay_payment_id,
-                signature: response.razorpay_signature,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
               },
               {
                 headers: {
@@ -270,9 +319,9 @@ const ProfilePage = () => {
       );
 
       // Update the user data with the new profile image
-      setUserData(prevData => ({
+      setUserData((prevData) => ({
         ...prevData,
-        profilePicture: response.data.profilePicture
+        profilePicture: response.data.profilePicture,
       }));
     } catch (error) {
       console.error("Error uploading image:", error);
@@ -289,6 +338,69 @@ const ProfilePage = () => {
   const scrollToSection = (ref) => {
     if (ref.current) {
       ref.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  // Format date function
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const handleCancelBooking = async (bookingId) => {
+    try {
+      setCancellingBookingId(bookingId);
+      setError(null);
+
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        throw new Error("No authentication token found. Please login again.");
+      }
+
+      const response = await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/bookings/${bookingId}/status`,
+        {
+          bookingStatus: "cancelled",
+          cancelledBy: "user",
+          cancellationReason: "User requested cancellation",
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data && response.data.success) {
+        // Update the booking in the local state
+        setUserBookings((prev) =>
+          prev.map((booking) =>
+            booking._id === bookingId
+              ? { ...booking, bookingStatus: "cancelled" }
+              : booking
+          )
+        );
+        alert("Booking cancelled successfully");
+      } else {
+        throw new Error("Failed to cancel booking");
+      }
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      let errorMessage = "Failed to cancel booking";
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      setError(errorMessage);
+      alert(errorMessage);
+    } finally {
+      setCancellingBookingId(null);
     }
   };
 
@@ -340,20 +452,22 @@ const ProfilePage = () => {
         </h1>
 
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button
-            style={{
-              backgroundColor: "#3e3027",
-              color: "white",
-              border: "none",
-              padding: "6px 12px",
-              borderRadius: "6px",
-              fontWeight: "bold",
-              cursor: "pointer",
-              fontSize: "13px",
-            }}
-          >
-            Become a Host
-          </button>
+          <Link to="/becomeHost">
+            <button
+              style={{
+                backgroundColor: "#3e3027",
+                color: "white",
+                border: "none",
+                padding: "6px 12px",
+                borderRadius: "6px",
+                fontWeight: "bold",
+                cursor: "pointer",
+                fontSize: "13px",
+              }}
+            >
+              Become a Host
+            </button>
+          </Link>
           <button
             style={{
               backgroundColor: "#3e3027",
@@ -383,7 +497,9 @@ const ProfilePage = () => {
             >
               {userData?.profilePicture ? (
                 <img
-                  src={`${import.meta.env.VITE_API_URL}${userData.profilePicture}`}
+                  src={`${import.meta.env.VITE_API_URL}${
+                    userData.profilePicture
+                  }`}
                   alt="Profile"
                   style={{ width: "100%", height: "100%", borderRadius: "50%" }}
                 />
@@ -404,14 +520,18 @@ const ProfilePage = () => {
               accept="image/*"
             />
             <h3 className="profile-name">{userData?.name || "Person Name"}</h3>
-            <p className="profile-phone">{userData?.mobile || "No phone number"}</p>
+            <p className="profile-phone">
+              {userData?.mobile || "No phone number"}
+            </p>
             <p className="profile-email">{userData?.email || "No email"}</p>
             <div className="profile-actions">
               <button className="action-button" onClick={handleEdit}>
-                <Edit size={20} color="#fff" />
+                <Edit size={20} color="white" />
+                Edit
               </button>
               <button className="action-button" onClick={handleSave}>
                 <Check size={20} color="#fff" />
+                Save
               </button>
             </div>
           </div>
@@ -642,22 +762,84 @@ const ProfilePage = () => {
           </div>
 
           <div ref={bookingsRef} className="content-section">
-            <h2 className="section-title">Bookings</h2>
+            <center>
+              <h2 className="section-title">Your Bookings</h2>
+            </center>
             <div className="bookings-content">
-              {userData.bookings &&
-                userData.bookings.map((booking, index) => (
-                  <div className="booking-item" key={index}>
-                    <img src={booking.modelImage} alt="Car" />
+              {bookingsLoading ? (
+                <div className="loading-message">Loading your bookings...</div>
+              ) : bookingsError ? (
+                <div className="error-message">{bookingsError}</div>
+              ) : userBookings.length === 0 ? (
+                <div className="no-bookings-message">
+                  <p>You haven't made any bookings yet.</p>
+                </div>
+              ) : (
+                userBookings.map((booking) => (
+                  <div className="booking-item" key={booking._id}>
+                    {booking.carId &&
+                    booking.carId.photos &&
+                    booking.carId.photos.length > 0 ? (
+                      <img
+                        src={`${import.meta.env.VITE_API_URL}${
+                          booking.carId.photos[0]
+                        }`}
+                        alt={booking.carName}
+                        className="booking-car-image"
+                      />
+                    ) : (
+                      <div className="booking-car-placeholder">No Image</div>
+                    )}
                     <div className="booking-details">
-                      <p>ID: {booking.id}</p>
-                      <p>Date: {booking.date}</p>
-                      <p>Location: {booking.location}</p>
+                      <h3 className="booking-car-name">{booking.carName}</h3>
+                      <div className="booking-info">
+                        <p>
+                          <Calendar size={16} /> {formatDate(booking.startDate)}{" "}
+                          - {formatDate(booking.endDate)}
+                        </p>
+                        <p>
+                          <Clock size={16} /> {booking.totalDays}{" "}
+                          {booking.totalDays === 1 ? "day" : "days"}
+                        </p>
+                        <p>
+                          <MapPin size={16} /> {booking.pickupLocation}
+                        </p>
+                      </div>
+                      <div className="booking-status-payment">
+                        <span
+                          className={`booking-status ${booking.bookingStatus}`}
+                        >
+                          {booking.bookingStatus}
+                        </span>
+                        <span className="booking-amount">
+                          ₹{booking.totalAmount}
+                        </span>
+                      </div>
                     </div>
-                    <button className="download-invoice-button">
-                      Download Invoice
-                    </button>
+                    {booking.bookingStatus === "confirmed" && (
+                      <div className="booking-actions">
+                        <button
+                          className="cancel-booking-btn"
+                          disabled={cancellingBookingId === booking._id}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                "Are you sure you want to cancel this booking?"
+                              )
+                            ) {
+                              handleCancelBooking(booking._id);
+                            }
+                          }}
+                        >
+                          {cancellingBookingId === booking._id
+                            ? "Cancelling..."
+                            : "Cancel"}
+                        </button>
+                      </div>
+                    )}
                   </div>
-                ))}
+                ))
+              )}
             </div>
           </div>
         </main>

@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaGoogle, FaFacebook } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -16,11 +16,26 @@ const api = axios.create({
 
 const Login = ({ toggleForm }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [redirectPath, setRedirectPath] = useState("/home-after-login");
+
+  // Check for redirect information when component mounts
+  useEffect(() => {
+    // If the location state has a returnTo path, use it for redirection after login
+    if (location.state && location.state.returnTo) {
+      // Store it for later but don't set as redirect path - we'll always go to home first
+      console.log(
+        "Found redirect path in location state:",
+        location.state.returnTo
+      );
+      // Don't set redirectPath anymore, always use home-after-login
+    }
+  }, [location]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
@@ -31,23 +46,35 @@ const Login = ({ toggleForm }) => {
     setIsLoading(true);
 
     try {
-      console.log('Attempting login with:', formData.email);
+      console.log("Attempting login with:", formData.email);
       const response = await api.post("/users/login", {
         email: formData.email,
         password: formData.password,
       });
 
       if (response.data.success) {
-        // Store the token in localStorage
+        // Store the token and user data in localStorage
         localStorage.setItem("authToken", response.data.token);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
+        localStorage.setItem("userData", JSON.stringify(response.data.user));
+
+        // Store additional useful user info separately for easier access
+        if (response.data.user) {
+          const user = response.data.user;
+          localStorage.setItem("userName", user.name || user.firstName || "");
+          localStorage.setItem("userEmail", user.email || "");
+          localStorage.setItem(
+            "userPhone",
+            user.phone || user.phoneNumber || ""
+          );
+        }
 
         // Show success message
         toast.success("Login successful!", {
           position: "top-center",
         });
 
-        // Redirect to home page
+        // Always redirect to home page after login, regardless of saved state
+        console.log("Redirecting to home-after-login");
         navigate("/home-after-login");
       } else {
         toast.error(response.data.error || "Login failed", {
@@ -55,31 +82,31 @@ const Login = ({ toggleForm }) => {
         });
       }
     } catch (error) {
-      console.error('Login error:', error);
-      
+      console.error("Login error:", error);
+
       // Handle different error cases
       if (error.response) {
         const errorMessage = error.response.data.error || "Login failed";
-        
+
         if (error.response.status === 403) {
           // Email not verified
           toast.error(
             <div>
               {errorMessage}
               <br />
-              <button 
+              <button
                 onClick={() => {
                   // Add resend verification logic here
-                  console.log('Resend verification clicked');
+                  console.log("Resend verification clicked");
                 }}
-                style={{ 
-                  background: 'none', 
-                  border: 'none', 
-                  color: 'blue', 
-                  textDecoration: 'underline',
-                  cursor: 'pointer',
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "blue",
+                  textDecoration: "underline",
+                  cursor: "pointer",
                   padding: 0,
-                  marginTop: '5px'
+                  marginTop: "5px",
                 }}
               >
                 Resend verification email
@@ -160,16 +187,6 @@ const Login = ({ toggleForm }) => {
           {isLoading ? "Logging in..." : "Sign In"}
         </button>
       </form>
-
-      <div className="divider">
-        <span>Or</span>
-      </div>
-      <button className="google-button">
-        <FaGoogle /> Sign in with Google
-      </button>
-      <button className="facebook-button">
-        <FaFacebook /> Sign in with Facebook
-      </button>
       <p className="toggle-text">
         Don't have an account?{" "}
         <span className="toggle-link" onClick={toggleForm}>

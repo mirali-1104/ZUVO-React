@@ -1,20 +1,48 @@
 const express = require("express");
 const router = express.Router();
 const Car = require("../models/Car");
+const Booking = require("../models/Booking");
+const mongoose = require("mongoose");
 const { auth } = require("../middleware/auth");
 const { hostAuth } = require("../middleware/auth");
 const multer = require("multer");
 const path = require("path");
-const fs = require("fs");
+const fs = require("fs").promises;
 const jwt = require("jsonwebtoken");
-const mongoose = require("mongoose");
+const carController = require("../controllers/carController");
+
+// Define custom middleware functions
+const protect = auth;
+
+// Admin protection middleware
+const adminProtect = (req, res, next) => {
+  // Call the auth middleware first
+  auth(req, res, (err) => {
+    if (err) return next(err);
+    
+    // Check if the user is an admin
+    if (req.userType === 'admin' || (req.user && req.user.role === 'admin')) {
+      // If admin is found in req.admin, ensure it's also available as req.user
+      if (req.admin && !req.user) {
+        req.user = req.admin;
+      }
+      
+      return next();
+    }
+    
+    return res.status(403).json({
+      success: false,
+      error: "Admin access required"
+    });
+  });
+};
 
 // Configure multer for multiple file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = path.join(__dirname, "../uploads/cars");
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    if (!fs.promises.access(uploadDir).then(() => true).catch(() => false)) {
+      fs.promises.mkdir(uploadDir, { recursive: true });
     }
     cb(null, uploadDir);
   },
@@ -747,5 +775,86 @@ router.post("/test-update-availability", async (req, res) => {
     });
   }
 });
+
+// Get all cars with their availability for specific dates
+router.get("/all-with-availability", async (req, res) => {
+  try {
+    console.log("Fetching all cars with availability info");
+    const { startDate, endDate } = req.query;
+    
+    // Fetch all cars regardless of availability status
+    const allCars = await Car.find({})
+      .select('_id carName brand carModel rentalPrice transmission fuelTypes numberOfSeats photos isAvailable hostId')
+      .sort({ createdAt: -1 });
+    
+    console.log(`Found ${allCars.length} cars total`);
+    
+    // If dates are provided, check booking availability for each car
+    if (startDate && endDate) {
+      const parsedStartDate = new Date(startDate);
+      const parsedEndDate = new Date(endDate);
+      
+      // Validate dates
+      if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid date format"
+        });
+      }
+      
+      // For each car, check if there are overlapping bookings
+      const carsWithAvailability = await Promise.all(allCars.map(async (car) => {
+        // Check for overlapping bookings
+        const existingBooking = await mongoose.model('Booking').findOne({
+          carId: car._id,
+          bookingStatus: { $in: ['confirmed', 'pending'] },
+          $or: [
+            // New booking starts during an existing booking
+            { startDate: { $lte: parsedStartDate }, endDate: { $gte: parsedStartDate } },
+            // New booking ends during an existing booking
+            { startDate: { $lte: parsedEndDate }, endDate: { $gte: parsedEndDate } },
+            // New booking completely encompasses an existing booking
+            { startDate: { $gte: parsedStartDate }, endDate: { $lte: parsedEndDate } },
+            // Existing booking completely encompasses the new booking
+            { startDate: { $lte: parsedStartDate }, endDate: { $gte: parsedEndDate } }
+          ]
+        });
+        
+        return {
+          ...car.toObject(),
+          availableForDates: !existingBooking
+        };
+      }));
+      
+      return res.json({
+        success: true,
+        count: carsWithAvailability.length,
+        cars: carsWithAvailability
+      });
+    } else {
+      // If no dates provided, just return all cars
+      return res.json({
+        success: true,
+        count: allCars.length,
+        cars: allCars
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching cars with availability:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch cars",
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Add this route for getting car count (put it before any route with path parameters to avoid conflicts)
+router.get('/count', adminProtect, carController.getCarCount);
+
+// Admin routes for car management
+router.get('/admin/cars', adminProtect, carController.getAllCarsForAdmin);
+router.get('/admin/cars/:id', adminProtect, carController.getCarByIdForAdmin);
+router.put('/admin/cars/:id', adminProtect, carController.updateCarByAdmin);
 
 module.exports = router;

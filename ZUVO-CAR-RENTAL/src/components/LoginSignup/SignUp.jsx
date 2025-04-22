@@ -119,16 +119,6 @@ const SignUp = ({ toggleForm }) => {
 
       {error && <p className="error-text">{error}</p>}
       {success && <p className="success-text">{success}</p>}
-
-      <div className="divider">
-        <span>Or</span>
-      </div>
-      <button className="google-button">
-        <FaGoogle /> Sign up with Google
-      </button>
-      <button className="facebook-button">
-        <FaFacebook /> Sign up with Facebook
-      </button>
       <p className="toggle-text">
         Already have an account?{" "}
         <span className="toggle-link" onClick={toggleForm}>
